@@ -1068,6 +1068,89 @@
             }
         }
 
+        /* 推箱子游戏板 */
+        .sokoban-board {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            gap: 1px;
+            max-width: 400px;
+            margin: 0 auto;
+            width: 100%;
+            background: rgba(255,255,255,0.1);
+            border-radius: 8px;
+            padding: 4px;
+            aspect-ratio: 1;
+        }
+
+        .sokoban-cell {
+            aspect-ratio: 1;
+            background: rgba(255,255,255,0.05);
+            border-radius: 2px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            font-weight: bold;
+            transition: all 0.1s ease;
+        }
+
+        .sokoban-cell.wall {
+            background: linear-gradient(135deg, var(--danger), #ff6b6b);
+            border-radius: 2px;
+        }
+
+        .sokoban-cell.floor {
+            background: rgba(255,255,255,0.08);
+        }
+
+        .sokoban-cell.target {
+            background: linear-gradient(135deg, var(--warning), #ff9f1c);
+            border-radius: 50%;
+            opacity: 0.6;
+        }
+
+        .sokoban-cell.box {
+            background: linear-gradient(135deg, var(--success), #06d6a0);
+            border-radius: 4px;
+            box-shadow: 0 0 5px rgba(0, 208, 132, 0.5);
+        }
+
+        .sokoban-cell.box-on-target {
+            background: linear-gradient(135deg, var(--primary-dark), var(--primary-light));
+            border-radius: 4px;
+            box-shadow: 0 0 8px rgba(76, 201, 240, 0.7);
+        }
+
+        .sokoban-cell.player {
+            background: linear-gradient(135deg, var(--accent-dark), var(--accent-light));
+            border-radius: 50%;
+            box-shadow: 0 0 8px rgba(247, 37, 133, 0.7);
+            animation: pulse 0.5s ease infinite alternate;
+        }
+
+        /* 响应式推箱子游戏板 */
+        @media (max-width: 480px) {
+            .sokoban-board {
+                grid-template-columns: repeat(6, 1fr);
+                max-width: 360px;
+            }
+
+            .sokoban-cell {
+                font-size: 1rem;
+            }
+        }
+
+        @media (max-width: 360px) {
+            .sokoban-board {
+                grid-template-columns: repeat(5, 1fr);
+                max-width: 300px;
+            }
+
+            .sokoban-cell {
+                font-size: 0.9rem;
+            }
+        }
+
         /* 打印样式 */
         @media print {
             .header-actions,
@@ -1213,6 +1296,7 @@
             <div class="game-tabs" style="display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap;">
                 <button class="btn btn-primary" id="tabMemory" aria-label="切换到记忆翻牌游戏">记忆翻牌</button>
                 <button class="btn btn-secondary" id="tabSnake" aria-label="切换到贪吃蛇游戏">贪吃蛇</button>
+                <button class="btn btn-secondary" id="tabSokoban" aria-label="切换到推箱子游戏">推箱子</button>
             </div>
 
             <!-- 记忆翻牌游戏 -->
@@ -1267,6 +1351,36 @@
                 <div class="game-message" id="snakeMessage"></div>
                 <div style="text-align: center; color: #888; font-size: 13px; margin-top: 10px;">
                     使用方向键或WASD控制蛇的移动
+                </div>
+            </div>
+
+            <!-- 推箱子游戏 -->
+            <div id="sokobanGameContainer" class="game-container" style="display: none;">
+                <div class="game-info">
+                    <div class="game-stats">
+                        <div class="stat-item">
+                            <div class="stat-label">关卡</div>
+                            <div class="stat-value" id="sokobanLevel">1</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">步数</div>
+                            <div class="stat-value" id="sokobanMoves">0</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最佳</div>
+                            <div class="stat-value" id="sokobanBest">--</div>
+                        </div>
+                    </div>
+                    <div class="game-controls">
+                        <button class="btn btn-primary" id="startSokoban" aria-label="开始推箱子游戏">开始游戏</button>
+                        <button class="btn btn-secondary" id="resetSokoban" aria-label="重置推箱子游戏">重置</button>
+                        <button class="btn btn-secondary" id="nextLevel" aria-label="下一关">下一关</button>
+                    </div>
+                </div>
+                <div class="sokoban-board" id="sokobanBoard" role="grid" aria-label="推箱子游戏板"></div>
+                <div class="game-message" id="sokobanMessage"></div>
+                <div style="text-align: center; color: #888; font-size: 13px; margin-top: 10px;">
+                    使用方向键移动，将所有箱子推到目标位置
                 </div>
             </div>
         </section>
@@ -2049,6 +2163,371 @@
             }
         }
 
+        // ==================== 推箱子游戏模块 ====================
+        class SokobanGame {
+            constructor() {
+                this.boardSize = 8;
+                this.currentLevel = 1;
+                this.moves = 0;
+                this.gameInterval = null;
+                this.isGameActive = false;
+                this.storageKey = 'clock_sokoban_best';
+                
+                // 游戏关卡数据
+                // 0: 空地, 1: 墙壁, 2: 箱子, 3: 目标点, 4: 玩家
+                this.levels = [
+                    // 关卡 1
+                    {
+                        map: [
+                            [1,1,1,1,1,1,1,1],
+                            [1,0,0,0,0,0,0,1],
+                            [1,0,2,0,0,0,0,1],
+                            [1,0,0,0,3,0,0,1],
+                            [1,0,0,0,4,0,0,1],
+                            [1,0,0,0,0,0,0,1],
+                            [1,0,0,0,0,0,0,1],
+                            [1,1,1,1,1,1,1,1]
+                        ],
+                        player: { x: 4, y: 4 },
+                        boxes: [{ x: 2, y: 2 }],
+                        targets: [{ x: 4, y: 3 }]
+                    },
+                    // 关卡 2
+                    {
+                        map: [
+                            [1,1,1,1,1,1,1,1],
+                            [1,1,1,0,0,1,1,1],
+                            [1,1,1,2,0,1,1,1],
+                            [1,0,0,3,0,0,0,1],
+                            [1,0,0,2,4,0,0,1],
+                            [1,0,0,3,0,0,0,1],
+                            [1,1,1,1,1,1,1,1],
+                            [1,1,1,1,1,1,1,1]
+                        ],
+                        player: { x: 4, y: 4 },
+                        boxes: [{ x: 3, y: 2 }, { x: 3, y: 4 }],
+                        targets: [{ x: 3, y: 3 }, { x: 3, y: 5 }]
+                    },
+                    // 关卡 3
+                    {
+                        map: [
+                            [1,1,1,1,1,1,1,1],
+                            [1,0,0,0,0,0,0,1],
+                            [1,0,2,0,2,0,0,1],
+                            [1,0,0,1,0,0,0,1],
+                            [1,0,3,0,3,0,0,1],
+                            [1,0,0,0,4,0,0,1],
+                            [1,0,0,0,0,0,0,1],
+                            [1,1,1,1,1,1,1,1]
+                        ],
+                        player: { x: 4, y: 5 },
+                        boxes: [{ x: 2, y: 2 }, { x: 4, y: 2 }],
+                        targets: [{ x: 2, y: 4 }, { x: 4, y: 4 }]
+                    }
+                ];
+            }
+
+            // 初始化游戏
+            init() {
+                this.loadBestScore();
+                this.setupEventListeners();
+                this.renderBoard();
+                this.updateStats();
+            }
+
+            // 设置事件监听器
+            setupEventListeners() {
+                const startBtn = document.getElementById('startSokoban');
+                const resetBtn = document.getElementById('resetSokoban');
+                const nextBtn = document.getElementById('nextLevel');
+
+                if (startBtn) {
+                    startBtn.addEventListener('click', () => this.startGame());
+                }
+
+                if (resetBtn) {
+                    resetBtn.addEventListener('click', () => this.resetGame());
+                }
+
+                if (nextBtn) {
+                    nextBtn.addEventListener('click', () => this.nextLevel());
+                }
+
+                // 键盘控制
+                document.addEventListener('keydown', (e) => {
+                    if (!this.isGameActive) return;
+
+                    const key = e.key.toLowerCase();
+                    let dx = 0, dy = 0;
+
+                    switch(key) {
+                        case 'arrowup':
+                        case 'w':
+                            dy = -1;
+                            break;
+                        case 'arrowdown':
+                        case 's':
+                            dy = 1;
+                            break;
+                        case 'arrowleft':
+                        case 'a':
+                            dx = -1;
+                            break;
+                        case 'arrowright':
+                        case 'd':
+                            dx = 1;
+                            break;
+                        default:
+                            return;
+                    }
+
+                    e.preventDefault();
+                    this.movePlayer(dx, dy);
+                });
+            }
+
+            // 开始游戏
+            startGame() {
+                if (this.isGameActive) return;
+
+                this.isGameActive = true;
+                this.moves = 0;
+                this.currentLevel = 1;
+
+                this.renderBoard();
+                this.updateStats();
+                this.showMessage('游戏开始！使用方向键或WASD移动', 'info');
+            }
+
+            // 重置游戏
+            resetGame() {
+                this.isGameActive = false;
+                this.moves = 0;
+                this.currentLevel = 1;
+
+                this.renderBoard();
+                this.updateStats();
+                this.showMessage('点击"开始游戏"开始挑战！', 'info');
+            }
+
+            // 下一关
+            nextLevel() {
+                if (!this.isGameActive) {
+                    this.showMessage('请先开始游戏！', 'warning');
+                    return;
+                }
+
+                if (this.currentLevel < this.levels.length) {
+                    this.currentLevel++;
+                    this.moves = 0;
+                    this.renderBoard();
+                    this.updateStats();
+                    this.showMessage(`进入第${this.currentLevel}关！`, 'info');
+                } else {
+                    this.showMessage('🎉 恭喜！你已完成所有关卡！', 'success');
+                }
+            }
+
+            // 移动玩家
+            movePlayer(dx, dy) {
+                const level = this.levels[this.currentLevel - 1];
+                const player = { ...level.player };
+                const newPlayer = { x: player.x + dx, y: player.y + dy };
+
+                // 检查边界
+                if (newPlayer.x < 0 || newPlayer.x >= this.boardSize || 
+                    newPlayer.y < 0 || newPlayer.y >= this.boardSize) {
+                    return;
+                }
+
+                // 检查墙壁
+                if (level.map[newPlayer.y][newPlayer.x] === 1) {
+                    return;
+                }
+
+                // 检查箱子
+                const boxIndex = level.boxes.findIndex(box => box.x === newPlayer.x && box.y === newPlayer.y);
+                
+                if (boxIndex !== -1) {
+                    // 尝试推动箱子
+                    const newBox = { x: newPlayer.x + dx, y: newPlayer.y + dy };
+
+                    // 检查箱子是否可以移动
+                    if (newBox.x < 0 || newBox.x >= this.boardSize || 
+                        newBox.y < 0 || newBox.y >= this.boardSize) {
+                        return;
+                    }
+
+                    // 检查箱子是否撞墙
+                    if (level.map[newBox.y][newBox.x] === 1) {
+                        return;
+                    }
+
+                    // 检查箱子是否撞到其他箱子
+                    if (level.boxes.some(box => box.x === newBox.x && box.y === newBox.y)) {
+                        return;
+                    }
+
+                    // 移动箱子
+                    level.boxes[boxIndex] = newBox;
+                }
+
+                // 移动玩家
+                level.player = newPlayer;
+                this.moves++;
+
+                this.renderBoard();
+                this.updateStats();
+
+                // 检查是否获胜
+                if (this.checkWin()) {
+                    this.gameWon();
+                }
+            }
+
+            // 检查是否获胜
+            checkWin() {
+                const level = this.levels[this.currentLevel - 1];
+                return level.boxes.every(box => 
+                    level.targets.some(target => target.x === box.x && target.y === box.y)
+                );
+            }
+
+            // 游戏获胜
+            gameWon() {
+                this.isGameActive = false;
+
+                const bestScore = this.getBestScore();
+                const isNewRecord = !bestScore || this.moves < bestScore.moves;
+
+                if (isNewRecord) {
+                    this.saveBestScore();
+                    this.showMessage(`🎉 恭喜通关！新纪录！步数：${this.moves}`, 'success');
+                } else {
+                    this.showMessage(`🎉 通关成功！步数：${this.moves}`, 'success');
+                }
+
+                this.updateStats();
+            }
+
+            // 渲染游戏板
+            renderBoard() {
+                const board = document.getElementById('sokobanBoard');
+                if (!board) return;
+
+                board.innerHTML = '';
+
+                if (!this.isGameActive) {
+                    board.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #888;">点击"开始游戏"开始挑战</div>';
+                    return;
+                }
+
+                const level = this.levels[this.currentLevel - 1];
+
+                // 创建网格
+                for (let y = 0; y < this.boardSize; y++) {
+                    for (let x = 0; x < this.boardSize; x++) {
+                        const cell = document.createElement('div');
+                        cell.className = 'sokoban-cell';
+                        cell.setAttribute('role', 'gridcell');
+                        cell.setAttribute('aria-label', `位置 ${x},${y}`);
+
+                        // 检查单元格类型
+                        const isWall = level.map[y][x] === 1;
+                        const isTarget = level.targets.some(t => t.x === x && t.y === y);
+                        const isBox = level.boxes.some(b => b.x === x && b.y === y);
+                        const isPlayer = level.player.x === x && level.player.y === y;
+
+                        if (isWall) {
+                            cell.classList.add('wall');
+                            cell.textContent = '█';
+                        } else if (isPlayer && isTarget) {
+                            cell.classList.add('player');
+                            cell.textContent = '◎';
+                        } else if (isPlayer) {
+                            cell.classList.add('player');
+                            cell.textContent = '●';
+                        } else if (isBox && isTarget) {
+                            cell.classList.add('box-on-target');
+                            cell.textContent = '■';
+                        } else if (isBox) {
+                            cell.classList.add('box');
+                            cell.textContent = '□';
+                        } else if (isTarget) {
+                            cell.classList.add('target');
+                            cell.textContent = '○';
+                        } else {
+                            cell.classList.add('floor');
+                            cell.textContent = '';
+                        }
+
+                        board.appendChild(cell);
+                    }
+                }
+            }
+
+            // 更新统计
+            updateStats() {
+                const levelElement = document.getElementById('sokobanLevel');
+                const movesElement = document.getElementById('sokobanMoves');
+                const bestElement = document.getElementById('sokobanBest');
+
+                if (levelElement) levelElement.textContent = this.currentLevel;
+                if (movesElement) movesElement.textContent = this.moves;
+
+                const bestScore = this.getBestScore();
+                if (bestElement && bestScore) {
+                    bestElement.textContent = `${bestScore.moves}步`;
+                } else if (bestElement) {
+                    bestElement.textContent = '--';
+                }
+            }
+
+            // 显示消息
+            showMessage(text, type = 'info') {
+                const messageElement = document.getElementById('sokobanMessage');
+                if (!messageElement) return;
+
+                messageElement.textContent = text;
+                messageElement.className = `game-message ${type}`;
+            }
+
+            // 获取最佳成绩
+            getBestScore() {
+                try {
+                    const data = localStorage.getItem(this.storageKey);
+                    return data ? JSON.parse(data) : null;
+                } catch (error) {
+                    console.warn('Failed to load sokoban best score:', error);
+                    return null;
+                }
+            }
+
+            // 保存最佳成绩
+            saveBestScore() {
+                try {
+                    const bestScore = {
+                        moves: this.moves,
+                        level: this.currentLevel,
+                        date: new Date().toISOString()
+                    };
+                    localStorage.setItem(this.storageKey, JSON.stringify(bestScore));
+                } catch (error) {
+                    console.warn('Failed to save sokoban best score:', error);
+                }
+            }
+
+            // 加载最佳成绩
+            loadBestScore() {
+                // 已在getBestScore中处理
+            }
+
+            // 销毁游戏
+            destroy() {
+                // 清理资源
+            }
+        }
+
         // ==================== 主应用模块 ====================
         class ClockApp {
             constructor() {
@@ -2059,7 +2538,8 @@
                 this.isInitialized = false;
                 this.memoryGame = new MemoryGame();
                 this.snakeGame = new SnakeGame();
-                this.currentGame = 'memory'; // 'memory' or 'snake'
+                this.sokobanGame = new SokobanGame();
+                this.currentGame = 'memory'; // 'memory' or 'snake' or 'sokoban'
                 this.init();
             }
 
@@ -2077,6 +2557,7 @@
                     // 初始化游戏
                     this.memoryGame.init();
                     this.snakeGame.init();
+                    this.sokobanGame.init();
                     
                     // 定期清理旧数据（每天一次）
                     this.scheduleCleanup();
@@ -2139,6 +2620,7 @@
                 // 游戏切换按钮
                 document.getElementById('tabMemory').addEventListener('click', () => this.switchGame('memory'));
                 document.getElementById('tabSnake').addEventListener('click', () => this.switchGame('snake'));
+                document.getElementById('tabSokoban').addEventListener('click', () => this.switchGame('sokoban'));
 
                 // 键盘快捷键
                 document.getElementById('noteInput').addEventListener('keydown', (e) => {
