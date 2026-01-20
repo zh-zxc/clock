@@ -3,1377 +3,1365 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>数字时钟</title>
+    <title>时钟 - 记事与同步</title>
     <style>
-        :root {
-            --primary: #4cc9f0;
-            --secondary: #f72585;
-            --accent: #4361ee;
-            --dark-bg: #000;
-            --light-bg: linear-gradient(135deg, #87CEEB 0%, #E0F7FA 100%);
-            --card-dark: rgba(255, 255, 255, 0.15);
-            --card-light: rgba(255, 255, 255, 0.7);
-        }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
+        * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            min-height: 100vh;
-            transition: background 0.8s cubic-bezier(0.25, 0.8, 0.25, 1);
-            overflow: auto;
-        }
-
-        /* 主题样式 */
-        body.dark-theme {
-            background: var(--dark-bg);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0a0a0a;
             color: #fff;
-        }
-
-        body.light-theme {
-            background: var(--light-bg);
-            color: #333;
-        }
-
-        /* 星空背景 */
-        .stars {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: -1;
-        }
-
-        .star {
-            position: absolute;
-            background: #fff;
-            border-radius: 50%;
-            animation: twinkle var(--duration) infinite ease-in-out;
-        }
-
-        @keyframes twinkle {
-            0%, 100% { 
-                opacity: 0.2;
-                transform: scale(1);
-            }
-            50% { 
-                opacity: 1;
-                transform: scale(1.05);
-            }
-        }
-
-        /* 云朵 */
-        .cloud {
-            background: rgba(255, 255, 255, 0.9);
-            border-radius: 50%;
-            box-shadow: 0 0 10px rgba(255, 255, 255, 0.8);
-            z-index: -1;
-            transition: transform 0.3s ease;
-        }
-
-        .container {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
             min-height: 100vh;
             padding: 20px;
-            position: relative;
         }
-
+        body.light { background: #f0f0f0; color: #333; }
+        
+        .container { max-width: 1200px; margin: 0 auto; }
+        
+        /* 顶部 */
         .header {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            z-index: 10;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 12px;
         }
-
-        .theme-toggle {
-            background: rgba(255, 255, 255, 0.2);
+        body.light .header { background: rgba(255,255,255,0.8); }
+        
+        .btn {
+            padding: 8px 16px;
             border: none;
-            border-radius: 30px;
-            padding: 12px 20px;
-            color: white;
+            border-radius: 8px;
             cursor: pointer;
             font-weight: 600;
-            backdrop-filter: blur(5px);
-            transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-            font-size: 16px;
-            position: relative;
-            overflow: hidden;
+            transition: all 0.3s;
         }
-
-        body.light-theme .theme-toggle {
-            background: rgba(255, 255, 255, 0.5);
-            color: #333;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        .btn:hover { transform: translateY(-2px); }
+        .btn-primary { background: #4cc9f0; color: white; }
+        .btn-success { background: #00d084; color: white; }
+        .btn-warning { background: #ffb84d; color: white; }
+        .btn-danger { background: #ff4d4d; color: white; }
+        .btn-secondary { background: #6c757d; color: white; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+        
+        /* 时钟 */
+        .clock-section {
+            text-align: center;
+            padding: 40px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 12px;
+            margin-bottom: 20px;
         }
-
-        .theme-toggle:hover {
-            background: rgba(255, 255, 255, 0.3);
-            transform: translateY(-3px);
-            box-shadow: 0 6px 25px rgba(0, 0, 0, 0.3);
-        }
-
-        body.light-theme .theme-toggle:hover {
-            background: rgba(255, 255, 255, 0.7);
-            box-shadow: 0 6px 25px rgba(0, 0, 0, 0.15);
-        }
-
-        .theme-toggle::after {
-            content: "";
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 5px;
-            height: 5px;
-            background: rgba(255, 255, 255, 0.5);
-            opacity: 0;
-            border-radius: 100%;
-            transform: scale(1, 1) translate(-50%);
-            transform-origin: 50% 50%;
-        }
-
-        .theme-toggle:focus:not(:active)::after {
-            animation: ripple 1s ease-out;
-        }
-
-        @keyframes ripple {
-            0% {
-                transform: scale(0, 0);
-                opacity: 0.5;
-            }
-            100% {
-                transform: scale(50, 50);
-                opacity: 0;
-            }
-        }
-
+        body.light .clock-section { background: rgba(255,255,255,0.8); }
+        
         .clock {
-            font-size: 8rem;
+            font-size: 3.5rem;
             font-weight: 800;
-            letter-spacing: 5px;
             font-family: 'Courier New', monospace;
-            background: linear-gradient(to right, var(--primary), var(--secondary));
+            background: linear-gradient(to right, #4cc9f0, #f72585);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            background-clip: text;
-            text-shadow: 0 0 20px rgba(255, 255, 255, 0.7);
-            transition: all 0.5s cubic-bezier(0.25, 0.8, 0.25, 1);
-            position: relative;
             margin-bottom: 10px;
         }
-
-        body.light-theme .clock {
-            text-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
-        }
-
-        .date-display {
-            font-size: 2rem;
-            font-weight: 500;
-            opacity: 0.9;
-            letter-spacing: 1px;
-        }
-
-        .main-content {
+        
+        .date-display { font-size: 1.3rem; opacity: 0.9; }
+        
+        .status {
+            margin-top: 15px;
             display: flex;
-            flex-wrap: wrap;
-            gap: 20px;
-            width: 100%;
+            align-items: center;
             justify-content: center;
-            max-width: 1200px;
+            gap: 8px;
+            font-size: 14px;
         }
-
-        .time-section {
-            flex: 1;
-            min-width: 300px;
-            text-align: center;
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #ffb84d;
         }
-
-        .calendar-widget {
-            background: var(--card-dark);
-            backdrop-filter: blur(10px);
-            border-radius: 20px;
-            padding: 15px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-            border: 1px solid rgba(255, 255, 255, 0.18);
-            transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
-            flex: 0 0 auto;
-            width: 300px;
+        .status-dot.connected { background: #00d084; }
+        .status-dot.error { background: #ff4d4d; }
+        
+        /* 主内容区 */
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 350px;
+            gap: 20px;
+            margin-bottom: 20px;
         }
-
-        body.light-theme .calendar-widget {
-            background: var(--card-light);
-            border: 1px solid rgba(255, 255, 255, 0.8);
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        
+        @media (max-width: 968px) {
+            .main-grid { grid-template-columns: 1fr; }
         }
-
-        .calendar-widget:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+        
+        /* 日历 */
+        .calendar {
+            background: rgba(255,255,255,0.1);
+            border-radius: 12px;
+            padding: 20px;
         }
-
-        body.light-theme .calendar-widget:hover {
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
-        }
-
-        .widget-title {
-            text-align: center;
-            margin: 0 0 15px 0;
-            color: var(--primary);
-            font-size: 1.5rem;
-        }
-
-        body.light-theme .widget-title {
-            color: var(--accent);
-        }
-
-        /* 日历样式 */
+        body.light .calendar { background: rgba(255,255,255,0.8); }
+        
         .calendar-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 15px;
         }
-
-        .calendar-header button {
-            background: rgba(255, 255, 255, 0.2);
+        
+        .calendar-title { font-size: 1.2rem; font-weight: 700; color: #4cc9f0; }
+        body.light .calendar-title { color: #4361ee; }
+        
+        .calendar-nav button {
+            padding: 6px 12px;
+            background: rgba(255,255,255,0.2);
             border: none;
+            border-radius: 6px;
             color: white;
             cursor: pointer;
-            font-size: 16px;
-            padding: 8px 16px;
-            border-radius: 8px;
-            transition: all 0.3s ease;
-            font-weight: bold;
-            position: relative;
-            overflow: hidden;
+            font-weight: 600;
         }
-
-        body.light-theme .calendar-header button {
-            background: rgba(255, 255, 255, 0.5);
-            color: #333;
-        }
-
-        .calendar-header button:hover {
-            background: rgba(255, 255, 255, 0.3);
-            transform: scale(1.05);
-        }
-
-        body.light-theme .calendar-header button:hover {
-            background: rgba(255, 255, 255, 0.7);
-        }
-
-        .calendar-header button::after {
-            content: "";
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 5px;
-            height: 5px;
-            background: rgba(255, 255, 255, 0.5);
-            opacity: 0;
-            border-radius: 100%;
-            transform: scale(1, 1) translate(-50%);
-            transform-origin: 50% 50%;
-        }
-
-        .calendar-header button:focus:not(:active)::after {
-            animation: ripple 1s ease-out;
-        }
-
+        body.light .calendar-nav button { background: rgba(0,0,0,0.1); color: #333; }
+        
         .calendar-grid {
             display: grid;
             grid-template-columns: repeat(7, 1fr);
             gap: 5px;
         }
-
-        .calendar-day-header {
+        
+        .day-header {
             text-align: center;
             font-weight: 700;
             font-size: 12px;
             padding: 8px 0;
-            color: var(--primary);
-            text-transform: uppercase;
+            color: #4cc9f0;
         }
-
-        body.light-theme .calendar-day-header {
-            color: var(--accent);
-        }
-
-        .calendar-day {
+        
+        .day {
             aspect-ratio: 1;
             display: flex;
             align-items: center;
             justify-content: center;
             border-radius: 50%;
-            font-size: 16px;
-            font-weight: 500;
+            font-size: 14px;
             cursor: pointer;
-            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-            background: rgba(255, 255, 255, 0.1);
+            background: rgba(255,255,255,0.1);
+            transition: all 0.3s;
             position: relative;
         }
-
-        body.light-theme .calendar-day {
-            background: rgba(255, 255, 255, 0.5);
-            color: #333;
-        }
-
-        .calendar-day:hover {
-            background: rgba(76, 201, 240, 0.4);
-            transform: scale(1.1);
-        }
-
-        body.light-theme .calendar-day:hover {
-            background: rgba(76, 201, 240, 0.6);
-        }
-
-        .calendar-day.today {
-            background: linear-gradient(135deg, var(--secondary), #b5179e);
-            color: white;
-            font-weight: bold;
-            box-shadow: 0 0 15px rgba(247, 37, 133, 0.5);
-            animation: pulse 2s infinite;
-        }
-
-        .calendar-day.selected {
-            background: linear-gradient(135deg, var(--primary), var(--accent));
-            color: white;
-            box-shadow: 0 0 15px rgba(76, 201, 240, 0.5);
-            animation: pulse 1.5s infinite;
-        }
-
-        .calendar-day.has-notes::after {
+        body.light .day { background: rgba(0,0,0,0.05); }
+        .day:hover { background: rgba(76, 201, 240, 0.4); transform: scale(1.1); }
+        .day.today { background: #f72585; color: white; font-weight: bold; }
+        .day.selected { background: linear-gradient(135deg, #4cc9f0, #4361ee); color: white; }
+        .day.has-data::after {
             content: "•";
-            position: absolute;
-            bottom: 2px;
-            right: 6px;
-            color: #4cc9f0;
-            font-size: 20px;
-            text-shadow: 0 0 2px black;
-        }
-
-        .calendar-day.has-expenses::after {
-            content: "•";
-            position: absolute;
-            bottom: 2px;
-            right: 6px;
-            color: #f72585;
-            font-size: 20px;
-            text-shadow: 0 0 2px black;
-        }
-
-        .calendar-day.has-notes.has-expenses::after {
-            content: "●";
             position: absolute;
             bottom: 2px;
             right: 6px;
             color: #f72585;
             font-size: 16px;
-            text-shadow: 0 0 2px black;
         }
-
-        @keyframes pulse {
-            0%, 100% {
-                transform: scale(1);
-            }
-            50% {
-                transform: scale(1.05);
-            }
+        .day.other-month { opacity: 0.3; }
+        
+        /* 数据区域 */
+        .data-section {
+            background: rgba(255,255,255,0.1);
+            border-radius: 12px;
+            padding: 20px;
+            max-height: 600px;
+            overflow-y: auto;
         }
-
-        .calendar-day.other-month {
-            opacity: 0.5;
-            color: #aaa;
-        }
-
-        body.light-theme .calendar-day.other-month {
-            opacity: 0.6;
-            color: #666;
-        }
-
-        /* 记事本样式 */
-        .day-details {
-            margin-top: 20px;
-        }
-
+        body.light .data-section { background: rgba(255,255,255,0.8); }
+        
         .section-title {
-            font-size: 1.2rem;
-            font-weight: bold;
-            margin: 15px 0 10px;
-            padding: 8px 12px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 8px;
-            cursor: pointer;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            transition: all 0.3s ease;
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin-bottom: 15px;
+            color: #4cc9f0;
         }
-
-        body.light-theme .section-title {
-            background: rgba(255, 255, 255, 0.5);
+        body.light .section-title { color: #4361ee; }
+        
+        .input-group { margin-bottom: 15px; }
+        .input-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 14px;
+            font-weight: 600;
         }
-
-        .section-title:hover {
-            background: rgba(255, 255, 255, 0.2);
-        }
-
-        body.light-theme .section-title:hover {
-            background: rgba(255, 255, 255, 0.7);
-        }
-
-        .section-title::after {
-            content: "▼";
-            font-size: 0.8rem;
-            transition: transform 0.3s ease;
-        }
-
-        .section-title.collapsed::after {
-            transform: rotate(-90deg);
-        }
-
-        .section-content {
-            transition: all 0.3s ease;
-            max-height: 1000px;
-            overflow: hidden;
-        }
-
-        .section-content.collapsed {
-            max-height: 0;
-            overflow: hidden;
-        }
-
-        textarea, input {
+        .input-group input, .input-group textarea {
             width: 100%;
-            padding: 12px;
+            padding: 10px;
+            border: 1px solid rgba(255,255,255,0.2);
             border-radius: 8px;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            background: rgba(255, 255, 255, 0.15);
+            background: rgba(255,255,255,0.1);
             color: white;
             font-family: inherit;
-            margin-bottom: 10px;
-            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            font-size: 14px;
         }
-
-        body.light-theme textarea, 
-        body.light-theme input {
-            background: rgba(255, 255, 255, 0.8);
+        body.light .input-group input, body.light .input-group textarea {
+            background: rgba(255,255,255,0.9);
             color: #333;
-            border: 1px solid rgba(67, 97, 238, 0.5);
+            border-color: rgba(0,0,0,0.2);
         }
-
-        textarea:focus, input:focus {
-            outline: none;
-            border-color: var(--primary);
-            box-shadow: 0 0 10px rgba(76, 201, 240, 0.5);
-        }
-
-        body.light-theme textarea:focus,
-        body.light-theme input:focus {
-            border-color: var(--accent);
-            box-shadow: 0 0 10px rgba(67, 97, 238, 0.3);
-        }
-
-        .expense-form {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            margin-bottom: 15px;
-        }
-
-        .expense-form input {
-            flex: 1;
-            min-width: 100px;
-        }
-
-        #expense-amount {
-            flex: 0 0 30%;
-        }
-
-        #expense-description {
-            flex: 0 0 65%;
-        }
-
-        .save-btn {
-            width: 100%;
-            padding: 12px;
-            background: linear-gradient(45deg, var(--primary), var(--accent));
-            border: none;
-            border-radius: 8px;
-            color: white;
-            font-weight: bold;
-            cursor: pointer;
-            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-            margin-bottom: 15px;
-            font-size: 16px;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .save-btn:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-        }
-
-        body.light-theme .save-btn:hover {
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.15);
-        }
-
-        .save-btn::after {
-            content: "";
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 5px;
-            height: 5px;
-            background: rgba(255, 255, 255, 0.5);
-            opacity: 0;
-            border-radius: 100%;
-            transform: scale(1, 1) translate(-50%);
-            transform-origin: 50% 50%;
-        }
-
-        .save-btn:focus:not(:active)::after {
-            animation: ripple 1s ease-out;
-        }
-
+        
+        .expense-inputs { display: flex; gap: 10px; }
+        .expense-inputs input:first-child { flex: 0 0 30%; }
+        .expense-inputs input:last-child { flex: 1; }
+        
         .items-list {
-            margin-top: 10px;
+            margin-top: 15px;
             max-height: 250px;
             overflow-y: auto;
-            flex-grow: 1;
+            border-top: 1px solid rgba(255,255,255,0.1);
+            padding-top: 10px;
         }
-
+        
         .item {
             background: rgba(67, 97, 238, 0.2);
             border-radius: 8px;
             padding: 12px;
             margin-bottom: 10px;
-            position: relative;
-            animation: fadeIn 0.3s ease;
-            transition: all 0.3s ease;
+            animation: slideIn 0.3s ease;
         }
-
-        .item:hover {
-            transform: translateX(5px);
+        body.light .item { background: rgba(67, 97, 238, 0.1); }
+        
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
         }
-
+        
+        .item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+        
+        .item-date {
+            font-size: 12px;
+            font-weight: 600;
+            color: #4cc9f0;
+            opacity: 0.8;
+        }
+        
+        .item-delete {
+            background: #ff4d4d;
+            border: none;
+            color: white;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        
+        .item-content { font-size: 14px; line-height: 1.5; }
+        
         .expense-item {
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
-
-        body.light-theme .item {
-            background: rgba(67, 97, 238, 0.1);
-        }
-
-        .item-date, .expense-date {
-            font-size: 0.8rem;
-            margin-bottom: 5px;
-        }
-
-        .item-date {
-            font-weight: bold;
-            color: var(--primary);
-        }
-
-        .expense-date {
-            font-size: 0.7rem;
-            color: #aaa;
-        }
-
-        body.light-theme .item-date {
-            color: var(--accent);
-        }
-
-        body.light-theme .expense-date {
-            color: #666;
-        }
-
-        .item-text, .expense-description {
-            margin: 5px 0;
-            line-height: 1.4;
-            font-size: 0.9rem;
-        }
-
+        
         .expense-amount {
-            font-weight: bold;
-            color: var(--secondary);
+            font-weight: 700;
+            color: #f72585;
             font-size: 1.1rem;
         }
-
-        .item-delete {
-            background: rgba(247, 37, 133, 0.7);
-            width: 24px;
-            height: 24px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            font-size: 1rem;
-            font-weight: bold;
-            position: absolute;
-            top: 8px;
-            right: 8px;
-            transition: all 0.3s ease;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-        }
-
-        .item-delete:hover {
-            background: rgba(247, 37, 133, 1);
-            transform: scale(1.1);
-        }
-
-        .expense-delete {
-            flex-shrink: 0;
-            margin-left: 10px;
-        }
-
-        .no-items {
-            text-align: center;
-            padding: 20px;
-            color: #aaa;
-            font-style: italic;
-        }
-
-        /* 统计信息 */
+        
         .stats-bar {
-            display: flex;
-            justify-content: space-around;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
             margin-top: 15px;
             padding: 15px;
-            background: rgba(255, 255, 255, 0.1);
+            background: rgba(255,255,255,0.05);
             border-radius: 8px;
-            font-size: 0.9rem;
         }
-
-        body.light-theme .stats-bar {
-            background: rgba(255, 255, 255, 0.5);
+        body.light .stats-bar { background: rgba(0,0,0,0.05); }
+        
+        .stat-item { text-align: center; }
+        .stat-label { font-size: 12px; opacity: 0.7; margin-bottom: 5px; }
+        .stat-value { font-size: 18px; font-weight: 700; color: #4cc9f0; }
+        body.light .stat-value { color: #4361ee; }
+        
+        /* WebDAV */
+        .webdav-config {
+            background: rgba(255,255,255,0.1);
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 20px;
         }
-
-        .stat-item {
-            text-align: center;
-        }
-
-        .stat-label {
-            font-size: 0.8rem;
-            opacity: 0.8;
-            margin-bottom: 5px;
-        }
-
-        .stat-value {
-            font-weight: bold;
+        body.light .webdav-config { background: rgba(255,255,255,0.8); }
+        
+        .webdav-title {
             font-size: 1.1rem;
-            color: var(--primary);
+            font-weight: 700;
+            margin-bottom: 15px;
+            color: #4cc9f0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
-
-        body.light-theme .stat-value {
-            color: var(--accent);
+        
+        .config-grid { display: grid; gap: 10px; }
+        
+        .connection-status {
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 10px;
         }
-
-        /* 响应式设计 */
-        @media (max-width: 768px) {
-            .header {
-                top: 15px;
-                right: 15px;
-            }
-
-            .theme-toggle {
-                padding: 10px 15px;
-                font-size: 14px;
-            }
-
-            .calendar-widget {
-                padding: 15px;
-                min-width: 100%;
-                min-height: auto;
-            }
-
-            .calendar-day-header {
-                font-size: 12px;
-                padding: 8px 0;
-            }
-
-            .calendar-day {
-                font-size: 14px;
-            }
-
-            .clock {
-                font-size: 4.5rem;
-            }
-
-            .date-display {
-                font-size: 1.6rem;
-            }
-            
-            .expense-form {
-                flex-direction: column;
-            }
-            
-            #expense-amount, #expense-description {
-                flex: 1;
-            }
-            
-            .main-content {
-                gap: 15px;
-            }
+        .connection-status.disconnected {
+            background: rgba(108, 117, 125, 0.2);
+            color: #aaa;
+            border: 1px solid #6c757d;
         }
-
+        .connection-status.connected {
+            background: rgba(0, 208, 132, 0.2);
+            color: #00d084;
+            border: 1px solid #00d084;
+        }
+        .connection-status.error {
+            background: rgba(255, 77, 77, 0.2);
+            color: #ff4d4d;
+            border: 1px solid #ff4d4d;
+        }
+        
+        .sync-controls {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .sync-log {
+            margin-top: 15px;
+            padding: 10px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 150px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+        body.light .sync-log { background: rgba(0,0,0,0.1); }
+        
+        .log-entry { margin-bottom: 4px; opacity: 0.9; }
+        .log-entry.success { color: #00d084; }
+        .log-entry.error { color: #ff4d4d; }
+        .log-entry.info { color: #4cc9f0; }
+        .log-entry.warning { color: #ffb84d; }
+        
+        .tips {
+            margin-top: 15px;
+            padding: 12px;
+            background: rgba(255, 184, 77, 0.1);
+            border-left: 3px solid #ffb84d;
+            border-radius: 6px;
+            font-size: 12px;
+            line-height: 1.6;
+            color: #ffb84d;
+        }
+        
+        /* 响应式 */
         @media (max-width: 480px) {
-            .container {
-                padding: 15px;
-            }
-
-            .header {
-                top: 10px;
-                right: 10px;
-            }
-
-            .theme-toggle {
-                padding: 8px 12px;
-                font-size: 12px;
-            }
-
-            .calendar-widget {
-                padding: 12px;
-            }
-
-            .calendar-header {
-                margin-bottom: 10px;
-            }
-
-            .calendar-grid {
-                gap: 4px;
-            }
-
-            .calendar-day-header {
-                font-size: 10px;
-                padding: 6px 0;
-            }
-
-            .calendar-day {
-                font-size: 12px;
-            }
-
-            .clock {
-                font-size: 3.5rem;
-            }
-
-            .date-display {
-                font-size: 1.3rem;
-            }
+            .clock { font-size: 2.5rem; }
+            .date-display { font-size: 1rem; }
+            .header { flex-direction: column; gap: 10px; }
+            .sync-controls { grid-template-columns: 1fr; }
+            .stats-bar { grid-template-columns: 1fr; }
+            .expense-inputs { flex-direction: column; }
+            .expense-inputs input:first-child { flex: 1; }
         }
-
-        @keyframes fadeIn {
-            from { 
-                opacity: 0; 
-                transform: translateY(10px);
-            }
-            to { 
-                opacity: 1; 
-                transform: translateY(0);
-            }
+        
+        /* 滚动条 */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 3px; }
+        
+        /* 加载动画 */
+        .loading { opacity: 0.5; pointer-events: none; }
+        .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
         }
+        @keyframes spin { to { transform: rotate(360deg); } }
     </style>
 </head>
-<body class="dark-theme">
-    <!-- 星空背景 -->
-    <div class="stars" id="stars"></div>
-
+<body>
     <div class="container">
+        <!-- 顶部 -->
         <div class="header">
-            <button class="theme-toggle" id="theme-toggle">切换到浅色模式</button>
+            <div style="font-weight: 700; font-size: 1.2rem;">⏰ 时钟应用</div>
+            <div style="display: flex; gap: 10px;">
+                <button class="btn btn-secondary" id="themeToggle">🌓 主题</button>
+                <button class="btn btn-primary" id="quickSync">🔄 同步</button>
+            </div>
         </div>
 
-        <div class="clock-container">
+        <!-- 时钟 -->
+        <div class="clock-section">
             <div class="clock" id="clock">00:00:00</div>
-            <div class="date-display" id="date-display">加载中...</div>
+            <div class="date-display" id="dateDisplay">加载中...</div>
+            <div class="status">
+                <span class="status-dot" id="statusDot"></span>
+                <span id="statusText">未连接</span>
+            </div>
         </div>
 
-        <div class="main-content">
-            <div class="time-section">
-                <div class="day-details">
-                    <div class="section">
-                        <div class="section-title">
-                            <span>记事本</span>
-                        </div>
-                        <div class="section-content">
-                            <textarea id="note-input" placeholder="在此输入您的记事内容..."></textarea>
-                            <button class="save-btn" id="save-note">保存记事</button>
-                            <div class="items-list" id="notes-list"></div>
-                        </div>
-                    </div>
-                    
-                    <div class="section">
-                        <div class="section-title">
-                            <span>消费记录</span>
-                        </div>
-                        <div class="section-content">
-                            <div class="expense-form">
-                                <input type="number" id="expense-amount" placeholder="金额" step="0.01" min="0">
-                                <input type="text" id="expense-description" placeholder="消费描述">
-                            </div>
-                            <button class="save-btn" id="save-expense">记录消费</button>
-                            <div class="items-list" id="expenses-list"></div>
-                            <div class="stats-bar" id="expense-stats">
-                                <div class="stat-item">
-                                    <div class="stat-label">本日消费</div>
-                                    <div class="stat-value" id="today-expense">¥0.00</div>
-                                </div>
-                                <div class="stat-item">
-                                    <div class="stat-label">本月消费</div>
-                                    <div class="stat-value" id="month-expense">¥0.00</div>
-                                </div>
-                                <div class="stat-item">
-                                    <div class="stat-label">平均每日</div>
-                                    <div class="stat-value" id="avg-expense">¥0.00</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="calendar-widget">
-                <h2 class="widget-title">日历</h2>
+        <!-- 主内容 -->
+        <div class="main-grid">
+            <!-- 日历 -->
+            <div class="calendar">
                 <div class="calendar-header">
-                    <button id="prev-month">&lt; 上月</button>
-                    <span id="current-month-year">YYYY年MM月</span>
-                    <button id="next-month">下月 &gt;</button>
+                    <div class="calendar-title" id="calendarTitle">YYYY年MM月</div>
+                    <div class="calendar-nav">
+                        <button id="prevMonth"><</button>
+                        <button id="nextMonth">></button>
+                    </div>
                 </div>
-                <div class="calendar-grid" id="calendar-header">
-                    <div class="calendar-day-header">日</div>
-                    <div class="calendar-day-header">一</div>
-                    <div class="calendar-day-header">二</div>
-                    <div class="calendar-day-header">三</div>
-                    <div class="calendar-day-header">四</div>
-                    <div class="calendar-day-header">五</div>
-                    <div class="calendar-day-header">六</div>
+                <div class="calendar-grid">
+                    <div class="day-header">日</div>
+                    <div class="day-header">一</div>
+                    <div class="day-header">二</div>
+                    <div class="day-header">三</div>
+                    <div class="day-header">四</div>
+                    <div class="day-header">五</div>
+                    <div class="day-header">六</div>
                 </div>
-                <div class="calendar-grid" id="calendar-days"></div>
+                <div class="calendar-grid" id="calendarDays"></div>
             </div>
+
+            <!-- 数据 -->
+            <div class="data-section">
+                <!-- 记事 -->
+                <div class="section-title">📝 记事本</div>
+                <div class="input-group">
+                    <label>记事内容</label>
+                    <textarea id="noteInput" placeholder="在此输入记事内容..."></textarea>
+                </div>
+                <button class="btn btn-primary" id="saveNote" style="width: 100%;">保存记事</button>
+                <div class="items-list" id="notesList"></div>
+
+                <!-- 消费 -->
+                <div class="section-title" style="margin-top: 25px;">💰 消费记录</div>
+                <div class="input-group">
+                    <label>消费信息</label>
+                    <div class="expense-inputs">
+                        <input type="number" id="expenseAmount" placeholder="金额" step="0.01" min="0">
+                        <input type="text" id="expenseDesc" placeholder="描述">
+                    </div>
+                </div>
+                <button class="btn btn-primary" id="saveExpense" style="width: 100%;">记录消费</button>
+                <div class="items-list" id="expensesList"></div>
+
+                <!-- 统计 -->
+                <div class="stats-bar">
+                    <div class="stat-item">
+                        <div class="stat-label">本日消费</div>
+                        <div class="stat-value" id="todayExpense">¥0.00</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">本月消费</div>
+                        <div class="stat-value" id="monthExpense">¥0.00</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">平均每日</div>
+                        <div class="stat-value" id="avgExpense">¥0.00</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- WebDAV -->
+        <div class="webdav-config">
+            <div class="webdav-title">☁️ WebDAV 云盘同步</div>
+            
+            <div class="config-grid">
+                <div class="input-group">
+                    <label>服务器地址</label>
+                    <input type="text" id="webdavUrl" value="https://rebun.infini-cloud.net/dav/" readonly>
+                </div>
+                
+                <div class="input-group">
+                    <label>用户名（邮箱）</label>
+                    <input type="text" id="webdavUsername" placeholder="your-email@example.com">
+                </div>
+                
+                <div class="input-group">
+                    <label>应用密码</label>
+                    <input type="password" id="webdavPassword" placeholder="请输入应用密码">
+                </div>
+                
+                <div class="input-group">
+                    <label>同步路径（可选）</label>
+                    <input type="text" id="webdavPath" value="/clock-data/" placeholder="/clock-data/">
+                </div>
+
+                <div class="input-group">
+                    <label>
+                        <input type="checkbox" id="enableEncryption" checked>
+                        启用数据加密（AES-256）
+                    </label>
+                </div>
+
+                <div class="input-group">
+                    <label>加密密钥（可选）</label>
+                    <input type="password" id="encryptionKey" placeholder="留空使用默认密钥">
+                </div>
+            </div>
+
+            <div class="tips">
+                💡 <strong>使用说明：</strong><br>
+                • 需要使用 Infini Cloud 的<strong>应用密码</strong>（不是登录密码）<br>
+                • 在 Infini Cloud 账户设置中生成应用密码<br>
+                • 首次使用请先点击"连接 WebDAV"，然后点击"上传数据"
+            </div>
+
+            <div style="display: flex; gap: 10px; margin-top: 15px; flex-wrap: wrap;">
+                <button class="btn btn-success" id="connectWebDAV">连接 WebDAV</button>
+                <button class="btn btn-danger" id="disconnectWebDAV" style="display: none;">断开连接</button>
+            </div>
+
+            <div class="connection-status disconnected" id="connectionStatus">
+                <span>●</span>
+                <span id="connectionStatusText">未连接</span>
+            </div>
+
+            <div class="sync-controls">
+                <button class="btn btn-primary" id="uploadData" disabled>📤 上传数据</button>
+                <button class="btn btn-warning" id="downloadData" disabled>📥 下载数据</button>
+            </div>
+
+            <div class="sync-log" id="syncLog"></div>
         </div>
     </div>
 
     <script>
-        // 应用状态
-        const state = {
-            currentDate: new Date(),
-            selectedDate: new Date(),
-            notes: JSON.parse(localStorage.getItem('notes')) || {},
-            expenses: JSON.parse(localStorage.getItem('expenses')) || {},
-            isDarkTheme: true,
-            collapsedSections: {
-                notes: false,
-                expenses: false
+        // 配置
+        const CONFIG = {
+            STORAGE_KEYS: {
+                NOTES: 'clock_notes',
+                EXPENSES: 'clock_expenses',
+                THEME: 'clock_theme',
+                WEBDAV_CONFIG: 'webdav_config',
+                SYNC_TIMESTAMP: 'sync_timestamp'
+            },
+            DEFAULT_ENCRYPTION_KEY: 'ClockAppDefaultKey2024!',
+            WEBDAV_FILENAME: 'clock-data.json'
+        };
+
+        // 工具函数
+        const Utils = {
+            formatDate(date) {
+                return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+            },
+            generateId() {
+                return Date.now() + Math.random().toString(36).substr(2, 9);
+            },
+            formatCurrency(amount) {
+                return `¥${Number(amount).toFixed(2)}`;
+            },
+            getCurrentTimestamp() {
+                return new Date().toISOString();
+            },
+            escapeHtml(text) {
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
             }
         };
 
-        // 缓存常用的DOM元素引用，避免重复查询
-        const domCache = {
-            clock: document.getElementById('clock'),
-            dateDisplay: document.getElementById('date-display'),
-            currentMonthYear: document.getElementById('current-month-year'),
-            calendarDays: document.getElementById('calendar-days'),
-            noteInput: document.getElementById('note-input'),
-            notesList: document.getElementById('notes-list'),
-            expenseAmount: document.getElementById('expense-amount'),
-            expenseDescription: document.getElementById('expense-description'),
-            expensesList: document.getElementById('expenses-list'),
-            themeToggle: document.getElementById('theme-toggle'),
-            todayExpense: document.getElementById('today-expense'),
-            monthExpense: document.getElementById('month-expense'),
-            avgExpense: document.getElementById('avg-expense')
+        // 数据管理
+        const DataManager = {
+            getData(key, defaultValue = {}) {
+                try {
+                    const data = localStorage.getItem(key);
+                    return data ? JSON.parse(data) : defaultValue;
+                } catch {
+                    return defaultValue;
+                }
+            },
+            setData(key, data) {
+                try {
+                    localStorage.setItem(key, JSON.stringify(data));
+                    return true;
+                } catch {
+                    return false;
+                }
+            },
+            addItem(key, dateKey, item) {
+                const data = this.getData(key, {});
+                if (!data[dateKey]) data[dateKey] = [];
+                data[dateKey].push(item);
+                this.setData(key, data);
+                return data;
+            },
+            deleteItem(key, dateKey, itemId) {
+                const data = this.getData(key, {});
+                if (data[dateKey]) {
+                    data[dateKey] = data[dateKey].filter(item => item.id !== itemId);
+                    if (data[dateKey].length === 0) delete data[dateKey];
+                    this.setData(key, data);
+                }
+                return data;
+            },
+            getItems(key, dateKey) {
+                const data = this.getData(key, {});
+                return data[dateKey] || [];
+            },
+            getAllData() {
+                return {
+                    notes: this.getData(CONFIG.STORAGE_KEYS.NOTES, {}),
+                    expenses: this.getData(CONFIG.STORAGE_KEYS.EXPENSES, {}),
+                    version: '1.0',
+                    exportTime: Utils.getCurrentTimestamp()
+                };
+            },
+            importAllData(data) {
+                try {
+                    if (data.notes) this.setData(CONFIG.STORAGE_KEYS.NOTES, data.notes);
+                    if (data.expenses) this.setData(CONFIG.STORAGE_KEYS.EXPENSES, data.expenses);
+                    return true;
+                } catch {
+                    return false;
+                }
+            },
+            clearAll() {
+                try {
+                    localStorage.removeItem(CONFIG.STORAGE_KEYS.NOTES);
+                    localStorage.removeItem(CONFIG.STORAGE_KEYS.EXPENSES);
+                    return true;
+                } catch {
+                    return false;
+                }
+            },
+            getStats(selectedDate) {
+                const expenses = this.getData(CONFIG.STORAGE_KEYS.EXPENSES, {});
+                const dateKey = Utils.formatDate(selectedDate);
+                const year = selectedDate.getFullYear();
+                const month = selectedDate.getMonth();
+
+                const todayExpense = expenses[dateKey]?.reduce((sum, e) => sum + e.amount, 0) || 0;
+                let monthExpense = 0, expenseDays = 0;
+                
+                Object.keys(expenses).forEach(key => {
+                    const d = new Date(key);
+                    if (d.getFullYear() === year && d.getMonth() === month) {
+                        monthExpense += expenses[key].reduce((sum, e) => sum + e.amount, 0);
+                        expenseDays++;
+                    }
+                });
+
+                const avgExpense = expenseDays > 0 ? monthExpense / expenseDays : 0;
+                return { todayExpense, monthExpense, avgExpense };
+            }
         };
 
-        // 初始化应用
-        function init() {
-            createStars();
-            updateClock();
-            renderCalendar();
-            renderNotes();
-            renderExpenses();
-            
-            // 绑定事件
-            document.getElementById('prev-month').addEventListener('click', () => changeMonth(-1));
-            document.getElementById('next-month').addEventListener('click', () => changeMonth(1));
-            domCache.themeToggle.addEventListener('click', toggleTheme);
-            document.getElementById('save-note').addEventListener('click', saveNote);
-            document.getElementById('save-expense').addEventListener('click', saveExpense);
-            
-            // 初始化时展开所有部分
-            document.querySelectorAll('.section-title').forEach(title => {
-                title.classList.remove('collapsed');
-            });
-            document.querySelectorAll('.section-content').forEach(content => {
-                content.classList.remove('collapsed');
-            });
-            
-            // 使用事件委托处理删除操作
-            domCache.notesList.addEventListener('click', handleDelete);
-            domCache.expensesList.addEventListener('click', handleDelete);
-            
-            // 添加事件委托处理折叠/展开
-            document.querySelector('.day-details').addEventListener('click', (e) => {
-                if (e.target.classList.contains('section-title') || e.target.parentElement.classList.contains('section-title')) {
-                    const title = e.target.classList.contains('section-title') ? e.target : e.target.parentElement;
-                    title.classList.toggle('collapsed');
-                    title.nextElementSibling.classList.toggle('collapsed');
-                }
-            });
-            
-            // 每秒更新时钟
-            setInterval(updateClock, 1000);
-            
-            // 初始化消费统计
-            updateExpenseStats();
-        }
-
-        // 更新时钟
-        function updateClock() {
-            const now = new Date();
-            const hours = String(now.getHours()).padStart(2, '0');
-            const minutes = String(now.getMinutes()).padStart(2, '0');
-            const seconds = String(now.getSeconds()).padStart(2, '0');
-            domCache.clock.textContent = `${hours}:${minutes}:${seconds}`;
-            
-            const options = { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' };
-            domCache.dateDisplay.textContent = now.toLocaleDateString('zh-CN', options);
-        }
-
-        // 切换月份
-        function changeMonth(delta) {
-            state.selectedDate.setMonth(state.selectedDate.getMonth() + delta);
-            renderCalendar();
-        }
-
-        // 渲染日历
-        function renderCalendar() {
-            const year = state.selectedDate.getFullYear();
-            const month = state.selectedDate.getMonth();
-            
-            // 更新月份显示
-            domCache.currentMonthYear.textContent = `${year}年${String(month + 1).padStart(2, '0')}月`;
-            
-            // 获取月份信息
-            const firstDay = new Date(year, month, 1);
-            const lastDay = new Date(year, month + 1, 0);
-            const prevLastDay = new Date(year, month, 0).getDate();
-            const daysInMonth = lastDay.getDate();
-            const startDay = firstDay.getDay();
-            
-            // 渲染日历
-            domCache.calendarDays.innerHTML = '';
-            
-            // 添加上个月的日期
-            for (let i = startDay - 1; i >= 0; i--) {
-                const dayEl = document.createElement('div');
-                dayEl.className = 'calendar-day other-month';
-                dayEl.textContent = prevLastDay - i;
-                domCache.calendarDays.appendChild(dayEl);
+        // 加密管理
+        class EncryptionManager {
+            constructor() {
+                this.key = null;
+                this.algorithm = { name: 'AES-GCM', length: 256 };
             }
-            
-            // 添加当前月份日期
-            const today = new Date();
-            for (let i = 1; i <= daysInMonth; i++) {
-                const dayEl = document.createElement('div');
-                dayEl.className = 'calendar-day';
-                dayEl.textContent = i;
-                
-                // 检查是否是今天
-                if (year === today.getFullYear() && month === today.getMonth() && i === today.getDate()) {
-                    dayEl.classList.add('today');
+
+            async initialize(password) {
+                try {
+                    const encoder = new TextEncoder();
+                    const passwordBuffer = encoder.encode(password);
+                    const keyMaterial = await crypto.subtle.importKey('raw', passwordBuffer, { name: 'PBKDF2' }, false, ['deriveBits', 'deriveKey']);
+                    const key = await crypto.subtle.deriveKey({ name: 'PBKDF2', salt: encoder.encode('ClockAppSalt2024'), iterations: 100000, hash: 'SHA-256' }, keyMaterial, this.algorithm, false, ['encrypt', 'decrypt']);
+                    this.key = key;
+                    return true;
+                } catch {
+                    return false;
                 }
-                
-                // 检查是否是选中的日期
-                const dateKey = formatDate(new Date(year, month, i));
-                if (year === state.selectedDate.getFullYear() && month === state.selectedDate.getMonth() && i === state.selectedDate.getDate()) {
-                    dayEl.classList.add('selected');
-                }
-                
-                // 检查是否有记事或消费记录
-                if (state.notes[dateKey] && state.notes[dateKey].length > 0) {
-                    dayEl.classList.add('has-notes');
-                }
-                
-                if (state.expenses[dateKey] && state.expenses[dateKey].length > 0) {
-                    dayEl.classList.add('has-expenses');
-                }
-                
-                // 添加点击事件
-                dayEl.addEventListener('click', () => {
-                    state.selectedDate = new Date(year, month, i);
-                    renderCalendar();
-                    renderNotes();
-                    renderExpenses();
-                    updateExpenseStats(); // 更新消费统计
-                });
-                
-                // 添加双击事件，用于直接添加消费记录
-                dayEl.addEventListener('dblclick', () => {
-                    const dateKey = formatDate(new Date(year, month, i));
-                    addCalendarExpense(dateKey, dayEl);
-                });
-                domCache.calendarDays.appendChild(dayEl);
             }
-            
-            // 添加下个月的日期
-            const totalCells = 42;
-            const remainingCells = totalCells - (startDay + daysInMonth);
-            for (let i = 1; i <= remainingCells; i++) {
-                const dayEl = document.createElement('div');
-                dayEl.className = 'calendar-day other-month';
-                dayEl.textContent = i;
-                domCache.calendarDays.appendChild(dayEl);
+
+            async encrypt(data) {
+                if (!this.key) throw new Error('加密密钥未初始化');
+                const encoder = new TextEncoder();
+                const dataBuffer = encoder.encode(JSON.stringify(data));
+                const iv = crypto.getRandomValues(new Uint8Array(12));
+                const encryptedBuffer = await crypto.subtle.encrypt({ name: 'AES-GCM', iv: iv }, this.key, dataBuffer);
+                const combined = new Uint8Array(iv.length + encryptedBuffer.byteLength);
+                combined.set(iv);
+                combined.set(new Uint8Array(encryptedBuffer), iv.length);
+                return btoa(String.fromCharCode(...combined));
+            }
+
+            async decrypt(encryptedData) {
+                if (!this.key) throw new Error('加密密钥未初始化');
+                try {
+                    const combined = Uint8Array.from(atob(encryptedData), c => c.charCodeAt(0));
+                    const iv = combined.slice(0, 12);
+                    const data = combined.slice(12);
+                    const decryptedBuffer = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: iv }, this.key, data);
+                    const decoder = new TextDecoder();
+                    return JSON.parse(decoder.decode(decryptedBuffer));
+                } catch {
+                    throw new Error('解密失败');
+                }
+            }
+
+            async isEncrypted(data) {
+                try {
+                    const decoded = atob(data);
+                    return decoded.length > 12;
+                } catch {
+                    return false;
+                }
             }
         }
 
-        // 切换主题
-        function toggleTheme() {
-            state.isDarkTheme = !state.isDarkTheme;
-            document.body.className = state.isDarkTheme ? 'dark-theme' : 'light-theme';
-            domCache.themeToggle.textContent = state.isDarkTheme ? '切换到浅色模式' : '切换到深色模式';
-            
-            // 添加淡入淡出效果
-            const starsContainer = document.getElementById('stars');
-            starsContainer.style.transition = 'opacity 0.5s ease-in-out';
-            starsContainer.style.opacity = '0';
-            setTimeout(() => {
-                if (state.isDarkTheme) {
-                    createStars();
-                } else {
-                    createClouds();
-                }
-                setTimeout(() => {
-                    starsContainer.style.opacity = '1';
-                }, 50);
-            }, 500);
-        }
+        // WebDAV管理
+        class WebDAVManager {
+            constructor() {
+                this.config = null;
+                this.isConnected = false;
+            }
 
-        // 创建星空
-        function createStars() {
-            const starsContainer = document.getElementById('stars');
-            starsContainer.innerHTML = '';
-            starsContainer.style.transition = 'opacity 0.5s ease-in-out';
-            
-            if (!state.isDarkTheme) return;
-            
-            // 减少星星数量以降低资源消耗
-            for (let i = 0; i < 50; i++) {
-                const star = document.createElement('div');
-                star.classList.add('star');
-                
-                const size = Math.random() * 2;
-                star.style.width = `${size}px`;
-                star.style.height = `${size}px`;
-                star.style.left = `${Math.random() * 100}%`;
-                star.style.top = `${Math.random() * 100}%`;
-                
-                const duration = 2 + Math.random() * 2;
-                star.style.setProperty('--duration', `${duration}s`);
-                star.style.animationDelay = `${Math.random() * 1}s`;
-                
-                // 添加初始透明度以实现淡入效果
-                star.style.opacity = '0';
-                starsContainer.appendChild(star);
-                
-                // 淡入效果
-                setTimeout(() => {
-                    star.style.opacity = '1';
-                    star.style.transition = 'opacity 1s ease-in-out';
-                }, 10);
+            async connect(config) {
+                this.config = config;
+                try {
+                    const response = await fetch(this.config.url, {
+                        method: 'PROPFIND',
+                        headers: {
+                            'Depth': '1',
+                            'Authorization': `Basic ${btoa(`${this.config.username}:${this.config.password}`)}`
+                        }
+                    });
+                    if (response.ok || response.status === 207) {
+                        this.isConnected = true;
+                        return { success: true, message: '连接成功' };
+                    }
+                    throw new Error(`连接失败: ${response.status}`);
+                } catch (error) {
+                    this.isConnected = false;
+                    return { success: false, message: error.message };
+                }
+            }
+
+            async disconnect() {
+                this.config = null;
+                this.isConnected = false;
+                return { success: true, message: '已断开连接' };
+            }
+
+            async upload(data, filename = CONFIG.WEBDAV_FILENAME) {
+                if (!this.isConnected || !this.config) {
+                    return { success: false, message: '未连接到WebDAV服务器' };
+                }
+                try {
+                    const path = this.normalizePath(filename);
+                    const url = `${this.config.url}${path}`;
+                    const content = JSON.stringify(data, null, 2);
+                    const response = await fetch(url, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Basic ${btoa(`${this.config.username}:${this.config.password}`)}`
+                        },
+                        body: content
+                    });
+                    if (response.ok) {
+                        return { success: true, message: '上传成功' };
+                    }
+                    const errorText = await response.text();
+                    throw new Error(`上传失败: ${response.status}. ${errorText.substring(0, 100)}`);
+                } catch (error) {
+                    return { success: false, message: error.message };
+                }
+            }
+
+            async download(filename = CONFIG.WEBDAV_FILENAME) {
+                if (!this.isConnected || !this.config) {
+                    return { success: false, message: '未连接到WebDAV服务器' };
+                }
+                try {
+                    const path = this.normalizePath(filename);
+                    const url = `${this.config.url}${path}`;
+                    const response = await fetch(url, {
+                        headers: {
+                            'Authorization': `Basic ${btoa(`${this.config.username}:${this.config.password}`)}`
+                        }
+                    });
+                    if (response.ok) {
+                        const text = await response.text();
+                        try {
+                            const data = JSON.parse(text);
+                            return { success: true, data: data };
+                        } catch {
+                            throw new Error('服务器返回了无效的数据格式');
+                        }
+                    } else if (response.status === 404) {
+                        return { success: false, message: '文件不存在', notFound: true };
+                    }
+                    throw new Error(`下载失败: ${response.status}`);
+                } catch (error) {
+                    return { success: false, message: error.message };
+                }
+            }
+
+            normalizePath(filename) {
+                let path = this.config.path || '/';
+                if (!path.startsWith('/')) path = '/' + path;
+                if (!path.endsWith('/')) path = path + '/';
+                return path + filename;
             }
         }
 
-        // 创建云朵
-        function createClouds() {
-            const starsContainer = document.getElementById('stars');
-            starsContainer.innerHTML = '';
-            starsContainer.style.transition = 'opacity 0.5s ease-in-out';
-            
-            if (state.isDarkTheme) return;
-            
-            // 减少云朵数量以降低资源消耗
-            for (let i = 0; i < 3; i++) {
-                const cloudGroup = document.createElement('div');
-                cloudGroup.style.position = 'absolute';
-                cloudGroup.style.left = `${Math.random() * 100}%`;
-                cloudGroup.style.top = `${Math.random() * 100}%`;
-                cloudGroup.style.transform = `scale(${0.3 + Math.random() * 0.5})`;
-                cloudGroup.style.opacity = '0';
-                cloudGroup.style.zIndex = -1;
-                cloudGroup.style.transition = 'opacity 1s ease-in-out';
-                
-                const mainCircle = document.createElement('div');
-                mainCircle.classList.add('cloud');
-                const mainSize = 30 + Math.random() * 20;
-                mainCircle.style.width = `${mainSize}px`;
-                mainCircle.style.height = `${mainSize * 0.6}px`;
-                mainCircle.style.position = 'absolute';
-                mainCircle.style.left = '0px';
-                mainCircle.style.top = '0px';
-                cloudGroup.appendChild(mainCircle);
-                
-                const circleCount = 1 + Math.floor(Math.random() * 2);
-                for (let j = 0; j < circleCount; j++) {
-                    const circle = document.createElement('div');
-                    circle.classList.add('cloud');
+        // 同步管理
+        class SyncManager {
+            constructor(dataManager, webDAVManager, encryptionManager) {
+                this.dataManager = dataManager;
+                this.webDAVManager = webDAVManager;
+                this.encryptionManager = encryptionManager;
+                this.isSyncing = false;
+                this.syncLog = [];
+            }
+
+            async sync(direction = 'auto') {
+                if (this.isSyncing) return { success: false, message: '同步正在进行中' };
+                this.isSyncing = true;
+                this.addLog('开始同步...', 'info');
+
+                try {
+                    if (!this.webDAVManager.isConnected) {
+                        this.addLog('未连接到WebDAV服务器', 'error');
+                        return { success: false, message: '未连接到WebDAV服务器' };
+                    }
+
+                    const localData = this.getLocalData();
+                    this.addLog(`本地数据: ${Object.keys(localData.notes).length}条记事, ${Object.keys(localData.expenses).length}条消费`, 'info');
+
+                    const downloadResult = await this.webDAVManager.download();
                     
-                    const size = mainSize * (0.3 + Math.random() * 0.3);
-                    circle.style.width = `${size}px`;
-                    circle.style.height = `${size}px`;
-                    circle.style.position = 'absolute';
-                    circle.style.left = `${(Math.random() - 0.5) * mainSize * 0.6}px`;
-                    circle.style.top = `${(Math.random() - 0.5) * mainSize * 0.3}px`;
-                    
-                    cloudGroup.appendChild(circle);
+                    if (!downloadResult.success) {
+                        if (downloadResult.notFound) {
+                            this.addLog('云端文件不存在，将上传本地数据', 'info');
+                            return await this.uploadData(localData);
+                        }
+                        this.addLog(`下载失败: ${downloadResult.message}`, 'error');
+                        return { success: false, message: `下载失败: ${downloadResult.message}` };
+                    }
+
+                    const cloudData = downloadResult.data;
+                    this.addLog(`云端数据: ${Object.keys(cloudData.notes).length}条记事, ${Object.keys(cloudData.expenses).length}条消费`, 'info');
+
+                    if (direction === 'auto') {
+                        const localTime = new Date(localStorage.getItem(CONFIG.SYNC_TIMESTAMP) || 0);
+                        const cloudTime = new Date(cloudData.lastModified || 0);
+                        if (localTime > cloudTime) {
+                            this.addLog('本地数据较新，上传到云端', 'info');
+                            return await this.uploadData(localData);
+                        } else {
+                            this.addLog('云端数据较新，下载到本地', 'info');
+                            this.saveLocalData(cloudData);
+                            return { success: true, message: '下载成功' };
+                        }
+                    } else if (direction === 'upload') {
+                        return await this.uploadData(localData);
+                    } else if (direction === 'download') {
+                        this.saveLocalData(cloudData);
+                        return { success: true, message: '下载成功' };
+                    }
+                } catch (error) {
+                    this.addLog(`同步异常: ${error.message}`, 'error');
+                    return { success: false, message: `同步异常: ${error.message}` };
+                } finally {
+                    this.isSyncing = false;
                 }
-                
-                starsContainer.appendChild(cloudGroup);
-                
-                // 淡入效果
-                setTimeout(() => {
-                    cloudGroup.style.opacity = '0.8';
-                }, 10);
+            }
+
+            async uploadData(data) {
+                try {
+                    const enableEncryption = document.getElementById('enableEncryption').checked;
+                    let uploadData = data;
+                    if (enableEncryption) {
+                        const encryptionKey = document.getElementById('encryptionKey').value || CONFIG.DEFAULT_ENCRYPTION_KEY;
+                        if (!this.encryptionManager.key) {
+                            await this.encryptionManager.initialize(encryptionKey);
+                        }
+                        uploadData = await this.encryptionManager.encrypt(data);
+                        this.addLog('数据加密完成', 'success');
+                    }
+                    const result = await this.webDAVManager.upload(uploadData);
+                    if (result.success) {
+                        localStorage.setItem(CONFIG.SYNC_TIMESTAMP, Utils.getCurrentTimestamp());
+                        this.addLog('上传成功', 'success');
+                    } else {
+                        this.addLog(`上传失败: ${result.message}`, 'error');
+                    }
+                    return result;
+                } catch (error) {
+                    this.addLog(`上传异常: ${error.message}`, 'error');
+                    return { success: false, message: error.message };
+                }
+            }
+
+            getLocalData() {
+                return this.dataManager.getAllData();
+            }
+
+            saveLocalData(data) {
+                this.dataManager.importAllData(data);
+                localStorage.setItem(CONFIG.SYNC_TIMESTAMP, Utils.getCurrentTimestamp());
+            }
+
+            addLog(message, type = 'info') {
+                const timestamp = new Date().toLocaleTimeString();
+                this.syncLog.push({ timestamp, message, type });
+                if (this.syncLog.length > 50) this.syncLog.shift();
+                this.updateLogUI();
+            }
+
+            updateLogUI() {
+                const logContainer = document.getElementById('syncLog');
+                if (!logContainer) return;
+                const logHTML = this.syncLog.map(log => `<div class="log-entry ${log.type}">[${log.timestamp}] ${log.message}</div>`).join('');
+                logContainer.innerHTML = logHTML;
+                logContainer.scrollTop = logContainer.scrollHeight;
             }
         }
 
-        // 通用保存函数
-        function saveItem(type, getData) {
-            const data = getData();
-            if (!data.isValid) return;
-            
-            const dateKey = formatDate(state.selectedDate);
-            if (!state[type][dateKey]) {
-                state[type][dateKey] = [];
+        // 应用主类
+        class ClockApp {
+            constructor() {
+                this.selectedDate = new Date();
+                this.currentMonth = new Date();
+                this.encryptionManager = new EncryptionManager();
+                this.webDAVManager = new WebDAVManager();
+                this.syncManager = new SyncManager(DataManager, this.webDAVManager, this.encryptionManager);
+                this.isDarkTheme = true;
+                this.init();
             }
-            
-            state[type][dateKey].push(data.item);
-            localStorage.setItem(type, JSON.stringify(state[type]));
-            data.clearInputs();
-            data.renderFunction();
-            renderCalendar(); // 重新渲染日历以更新标记
-        }
 
-        // 保存记事
-        function saveNote() {
-            saveItem('notes', () => {
-                const text = domCache.noteInput.value.trim();
-                if (!text) return { isValid: false };
-                
-                return {
-                    isValid: true,
-                    item: {
-                        id: Date.now(),
-                        text: text,
-                        timestamp: new Date().toISOString()
-                    },
-                    clearInputs: () => { domCache.noteInput.value = ''; },
-                    renderFunction: renderNotes
+            init() {
+                this.loadTheme();
+                this.loadWebDAVConfig();
+                this.setupEventListeners();
+                this.startClock();
+                this.renderCalendar();
+                this.renderData();
+            }
+
+            loadTheme() {
+                const savedTheme = localStorage.getItem(CONFIG.STORAGE_KEYS.THEME);
+                if (savedTheme) this.isDarkTheme = savedTheme === 'dark';
+                this.applyTheme();
+            }
+
+            applyTheme() {
+                document.body.className = this.isDarkTheme ? '' : 'light';
+            }
+
+            loadWebDAVConfig() {
+                const savedConfig = localStorage.getItem(CONFIG.STORAGE_KEYS.WEBDAV_CONFIG);
+                if (savedConfig) {
+                    const config = JSON.parse(savedConfig);
+                    document.getElementById('webdavUsername').value = config.username || '';
+                    document.getElementById('webdavPassword').value = config.password || '';
+                    document.getElementById('webdavPath').value = config.path || '/clock-data/';
+                    document.getElementById('enableEncryption').checked = config.enableEncryption !== false;
+                    document.getElementById('encryptionKey').value = config.encryptionKey || '';
+                }
+            }
+
+            saveWebDAVConfig() {
+                const config = {
+                    url: document.getElementById('webdavUrl').value,
+                    username: document.getElementById('webdavUsername').value,
+                    password: document.getElementById('webdavPassword').value,
+                    path: document.getElementById('webdavPath').value,
+                    enableEncryption: document.getElementById('enableEncryption').checked,
+                    encryptionKey: document.getElementById('encryptionKey').value
                 };
-            });
-        }
+                localStorage.setItem(CONFIG.STORAGE_KEYS.WEBDAV_CONFIG, JSON.stringify(config));
+            }
 
-        // 保存消费记录
-        function saveExpense() {
-            saveItem('expenses', () => {
-                const amount = domCache.expenseAmount.value.trim();
-                const description = domCache.expenseDescription.value.trim();
-                
-                if (!amount || parseFloat(amount) <= 0) {
-                    alert('请输入有效的金额');
-                    return { isValid: false };
-                }
-                
-                return {
-                    isValid: true,
-                    item: {
-                        id: Date.now(),
-                        amount: parseFloat(amount),
-                        description: description || '未命名消费',
-                        timestamp: new Date().toISOString()
-                    },
-                    clearInputs: () => {
-                        domCache.expenseAmount.value = '';
-                        domCache.expenseDescription.value = '';
-                    },
-                    renderFunction: renderExpenses
+            setupEventListeners() {
+                document.getElementById('themeToggle').addEventListener('click', () => {
+                    this.isDarkTheme = !this.isDarkTheme;
+                    localStorage.setItem(CONFIG.STORAGE_KEYS.THEME, this.isDarkTheme ? 'dark' : 'light');
+                    this.applyTheme();
+                });
+
+                document.getElementById('prevMonth').addEventListener('click', () => {
+                    this.currentMonth.setMonth(this.currentMonth.getMonth() - 1);
+                    this.renderCalendar();
+                });
+
+                document.getElementById('nextMonth').addEventListener('click', () => {
+                    this.currentMonth.setMonth(this.currentMonth.getMonth() + 1);
+                    this.renderCalendar();
+                });
+
+                document.getElementById('saveNote').addEventListener('click', () => this.saveNote());
+                document.getElementById('saveExpense').addEventListener('click', () => this.saveExpense());
+
+                document.getElementById('connectWebDAV').addEventListener('click', () => this.connectWebDAV());
+                document.getElementById('disconnectWebDAV').addEventListener('click', () => this.disconnectWebDAV());
+                document.getElementById('uploadData').addEventListener('click', () => this.uploadData());
+                document.getElementById('downloadData').addEventListener('click', () => this.downloadData());
+                document.getElementById('quickSync').addEventListener('click', () => this.quickSync());
+
+                document.getElementById('noteInput').addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' && e.ctrlKey) {
+                        e.preventDefault();
+                        this.saveNote();
+                    }
+                });
+
+                document.getElementById('expenseAmount').addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        document.getElementById('expenseDesc').focus();
+                    }
+                });
+
+                document.getElementById('expenseDesc').addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' && e.ctrlKey) {
+                        e.preventDefault();
+                        this.saveExpense();
+                    }
+                });
+            }
+
+            startClock() {
+                const update = () => {
+                    const now = new Date();
+                    const hours = String(now.getHours()).padStart(2, '0');
+                    const minutes = String(now.getMinutes()).padStart(2, '0');
+                    const seconds = String(now.getSeconds()).padStart(2, '0');
+                    document.getElementById('clock').textContent = `${hours}:${minutes}:${seconds}`;
+                    document.getElementById('dateDisplay').textContent = now.toLocaleDateString('zh-CN', {
+                        year: 'numeric', month: 'long', day: 'numeric', weekday: 'long'
+                    });
                 };
-            });
-        }
+                update();
+                setInterval(update, 1000);
+            }
 
-        // 添加在日历上直接记录消费的功能
-        function addCalendarExpense(dateKey, dayElement) {
-            const amount = prompt('请输入消费金额:');
-            if (amount === null) return; // 用户取消操作
-            
-            const amountValue = parseFloat(amount);
-            if (isNaN(amountValue) || amountValue <= 0) {
-                alert('请输入有效的金额');
-                return;
-            }
-            
-            const description = prompt('请输入消费描述(可选):') || '未命名消费';
-            
-            // 保存消费记录
-            if (!state.expenses[dateKey]) {
-                state.expenses[dateKey] = [];
-            }
-            
-            state.expenses[dateKey].push({
-                id: Date.now(),
-                amount: amountValue,
-                description: description,
-                timestamp: new Date().toISOString()
-            });
-            
-            localStorage.setItem('expenses', JSON.stringify(state.expenses));
-            renderExpenses();
-            renderCalendar(); // 重新渲染日历以更新标记
-            updateExpenseStats(); // 更新统计信息
-        }
+            renderCalendar() {
+                const year = this.currentMonth.getFullYear();
+                const month = this.currentMonth.getMonth();
+                document.getElementById('calendarTitle').textContent = `${year}年${String(month + 1).padStart(2, '0')}月`;
 
-        // 更新消费统计
-        function updateExpenseStats() {
-            const dateKey = formatDate(state.selectedDate);
-            const year = state.selectedDate.getFullYear();
-            const month = state.selectedDate.getMonth();
-            
-            // 计算本日消费
-            let todayExpense = 0;
-            if (state.expenses[dateKey]) {
-                todayExpense = state.expenses[dateKey].reduce((sum, expense) => sum + expense.amount, 0);
-            }
-            
-            // 计算本月消费
-            let monthExpense = 0;
-            Object.keys(state.expenses).forEach(key => {
-                const expenseDate = new Date(key);
-                if (expenseDate.getFullYear() === year && expenseDate.getMonth() === month) {
-                    monthExpense += state.expenses[key].reduce((sum, expense) => sum + expense.amount, 0);
+                const firstDay = new Date(year, month, 1);
+                const lastDay = new Date(year, month + 1, 0);
+                const prevLastDay = new Date(year, month, 0).getDate();
+                const startDay = firstDay.getDay();
+
+                const notes = DataManager.getData(CONFIG.STORAGE_KEYS.NOTES, {});
+                const expenses = DataManager.getData(CONFIG.STORAGE_KEYS.EXPENSES, {});
+                const daysContainer = document.getElementById('calendarDays');
+                daysContainer.innerHTML = '';
+
+                for (let i = startDay - 1; i >= 0; i--) {
+                    const day = this.createDayElement(prevLastDay - i, true);
+                    daysContainer.appendChild(day);
                 }
-            });
-            
-            // 计算本月有消费的天数
-            const expenseDays = Object.keys(state.expenses).filter(key => {
-                const expenseDate = new Date(key);
-                return expenseDate.getFullYear() === year && expenseDate.getMonth() === month;
-            }).length;
-            
-            // 计算平均每日消费
-            const avgExpense = expenseDays > 0 ? monthExpense / expenseDays : 0;
-            
-            // 更新UI
-            domCache.todayExpense.textContent = `¥${todayExpense.toFixed(2)}`;
-            domCache.monthExpense.textContent = `¥${monthExpense.toFixed(2)}`;
-            domCache.avgExpense.textContent = `¥${avgExpense.toFixed(2)}`;
-        }
 
-        // 处理删除事件
-        function handleDelete(e) {
-            if (e.target.classList.contains('item-delete')) {
-                const dateKey = e.target.getAttribute('data-date');
-                const id = parseInt(e.target.getAttribute('data-id'));
-                const type = e.target.getAttribute('data-type');
-                deleteItem(type, dateKey, id);
-                updateExpenseStats(); // 更新统计信息
-            }
-        }
-
-        // 通用删除函数
-        function deleteItem(type, dateKey, itemId) {
-            if (state[type][dateKey]) {
-                state[type][dateKey] = state[type][dateKey].filter(item => item.id !== itemId);
-                if (state[type][dateKey].length === 0) {
-                    delete state[type][dateKey];
+                const today = new Date();
+                for (let i = 1; i <= lastDay.getDate(); i++) {
+                    const dateKey = Utils.formatDate(new Date(year, month, i));
+                    const hasData = (notes[dateKey]?.length > 0) || (expenses[dateKey]?.length > 0);
+                    const isToday = today.getFullYear() === year && today.getMonth() === month && today.getDate() === i;
+                    const isSelected = this.selectedDate.getFullYear() === year && this.selectedDate.getMonth() === month && this.selectedDate.getDate() === i;
+                    const day = this.createDayElement(i, false, hasData, isToday, isSelected);
+                    day.addEventListener('click', () => {
+                        this.selectedDate = new Date(year, month, i);
+                        this.renderCalendar();
+                        this.renderData();
+                    });
+                    daysContainer.appendChild(day);
                 }
-                localStorage.setItem(type, JSON.stringify(state[type]));
-                
-                if (type === 'notes') {
-                    renderNotes();
-                } else if (type === 'expenses') {
-                    renderExpenses();
+
+                const totalCells = 42;
+                const remainingCells = totalCells - (startDay + lastDay.getDate());
+                for (let i = 1; i <= remainingCells; i++) {
+                    const day = this.createDayElement(i, true);
+                    daysContainer.appendChild(day);
                 }
-                renderCalendar(); // 重新渲染日历以更新标记
             }
-        }
 
-        // 通用渲染函数
-        function renderItem(container, items, renderFn, emptyMessage) {
-            if (items.length === 0) {
-                container.innerHTML = `<div class="no-items">${emptyMessage}</div>`;
-                return;
+            createDayElement(day, isOtherMonth, hasData = false, isToday = false, isSelected = false) {
+                const div = document.createElement('div');
+                div.className = 'day';
+                div.textContent = day;
+                if (isOtherMonth) div.classList.add('other-month');
+                if (hasData) div.classList.add('has-data');
+                if (isToday) div.classList.add('today');
+                if (isSelected) div.classList.add('selected');
+                return div;
             }
-            
-            container.innerHTML = items.map(renderFn).join('');
-        }
 
-        // 渲染记事
-        function renderNotes() {
-            const dateKey = formatDate(state.selectedDate);
-            const dateNotes = state.notes[dateKey] || [];
-            
-            renderItem(
-                domCache.notesList,
-                dateNotes,
-                note => `
+            renderData() {
+                const dateKey = Utils.formatDate(this.selectedDate);
+                const notes = DataManager.getItems(CONFIG.STORAGE_KEYS.NOTES, dateKey);
+                const expenses = DataManager.getItems(CONFIG.STORAGE_KEYS.EXPENSES, dateKey);
+
+                document.getElementById('notesList').innerHTML = notes.map(note => `
                     <div class="item">
-                        <div class="item-date">${new Date(note.timestamp).toLocaleString('zh-CN')}</div>
-                        <div class="item-text">${note.text}</div>
-                        <div class="item-delete" data-type="notes" data-date="${dateKey}" data-id="${note.id}">✕</div>
+                        <div class="item-header">
+                            <span class="item-date">${new Date(note.timestamp).toLocaleString('zh-CN')}</span>
+                            <button class="item-delete" onclick="app.deleteNote('${dateKey}', '${note.id}')">×</button>
+                        </div>
+                        <div class="item-content">${Utils.escapeHtml(note.text)}</div>
                     </div>
-                `,
-                '该日期暂无记事'
-            );
-        }
+                `).join('');
 
-        // 渲染消费记录
-        function renderExpenses() {
-            const dateKey = formatDate(state.selectedDate);
-            const dateExpenses = state.expenses[dateKey] || [];
-            
-            renderItem(
-                domCache.expensesList,
-                dateExpenses,
-                expense => `
+                document.getElementById('expensesList').innerHTML = expenses.map(expense => `
                     <div class="item">
+                        <div class="item-header">
+                            <span class="item-date">${new Date(expense.timestamp).toLocaleString('zh-CN')}</span>
+                            <button class="item-delete" onclick="app.deleteExpense('${dateKey}', '${expense.id}')">×</button>
+                        </div>
                         <div class="expense-item">
-                            <div>
-                                <div class="expense-amount">¥${expense.amount.toFixed(2)}</div>
-                                <div class="expense-description">${expense.description}</div>
-                                <div class="expense-date">${new Date(expense.timestamp).toLocaleString('zh-CN')}</div>
-                            </div>
-                            <div class="item-delete expense-delete" data-type="expenses" data-date="${dateKey}" data-id="${expense.id}">✕</div>
+                            <div class="item-content">${Utils.escapeHtml(expense.description)}</div>
+                            <div class="expense-amount">${Utils.formatCurrency(expense.amount)}</div>
                         </div>
                     </div>
-                `,
-                '该日期暂无消费记录'
-            );
-            
-            updateExpenseStats(); // 更新统计信息
+                `).join('');
+
+                this.updateStats();
+            }
+
+            updateStats() {
+                const stats = DataManager.getStats(this.selectedDate);
+                document.getElementById('todayExpense').textContent = Utils.formatCurrency(stats.todayExpense);
+                document.getElementById('monthExpense').textContent = Utils.formatCurrency(stats.monthExpense);
+                document.getElementById('avgExpense').textContent = Utils.formatCurrency(stats.avgExpense);
+            }
+
+            saveNote() {
+                const text = document.getElementById('noteInput').value.trim();
+                if (!text) {
+                    alert('请输入记事内容');
+                    return;
+                }
+                const dateKey = Utils.formatDate(this.selectedDate);
+                DataManager.addItem(CONFIG.STORAGE_KEYS.NOTES, dateKey, {
+                    id: Utils.generateId(),
+                    text: text,
+                    timestamp: Utils.getCurrentTimestamp()
+                });
+                document.getElementById('noteInput').value = '';
+                this.renderCalendar();
+                this.renderData();
+            }
+
+            saveExpense() {
+                const amount = document.getElementById('expenseAmount').value.trim();
+                const description = document.getElementById('expenseDesc').value.trim();
+                if (!amount || isNaN(amount) || parseFloat(amount) <= 0) {
+                    alert('请输入有效的金额');
+                    return;
+                }
+                const dateKey = Utils.formatDate(this.selectedDate);
+                DataManager.addItem(CONFIG.STORAGE_KEYS.EXPENSES, dateKey, {
+                    id: Utils.generateId(),
+                    amount: parseFloat(amount),
+                    description: description || '未命名消费',
+                    timestamp: Utils.getCurrentTimestamp()
+                });
+                document.getElementById('expenseAmount').value = '';
+                document.getElementById('expenseDesc').value = '';
+                this.renderCalendar();
+                this.renderData();
+            }
+
+            deleteNote(dateKey, id) {
+                if (confirm('确定要删除这条记事吗？')) {
+                    DataManager.deleteItem(CONFIG.STORAGE_KEYS.NOTES, dateKey, id);
+                    this.renderCalendar();
+                    this.renderData();
+                }
+            }
+
+            deleteExpense(dateKey, id) {
+                if (confirm('确定要删除这条消费记录吗？')) {
+                    DataManager.deleteItem(CONFIG.STORAGE_KEYS.EXPENSES, dateKey, id);
+                    this.renderCalendar();
+                    this.renderData();
+                }
+            }
+
+            async connectWebDAV() {
+                const url = document.getElementById('webdavUrl').value.trim();
+                const username = document.getElementById('webdavUsername').value.trim();
+                const password = document.getElementById('webdavPassword').value.trim();
+                const path = document.getElementById('webdavPath').value.trim() || '/clock-data/';
+
+                if (!url || !username || !password) {
+                    alert('请填写完整的WebDAV配置信息');
+                    return;
+                }
+
+                this.setConnectionStatus('connecting', '连接中...');
+                document.getElementById('connectWebDAV').disabled = true;
+
+                try {
+                    const config = { url, username, password, path };
+                    const result = await this.webDAVManager.connect(config);
+
+                    if (result.success) {
+                        this.setConnectionStatus('connected', '已连接');
+                        document.getElementById('connectWebDAV').style.display = 'none';
+                        document.getElementById('disconnectWebDAV').style.display = 'inline-block';
+                        document.getElementById('uploadData').disabled = false;
+                        document.getElementById('downloadData').disabled = false;
+                        this.saveWebDAVConfig();
+                        this.syncManager.addLog('WebDAV连接成功', 'success');
+                        this.updateSyncStatus('connected', '已连接');
+                    } else {
+                        this.setConnectionStatus('error', `连接失败: ${result.message}`);
+                        this.syncManager.addLog(`连接失败: ${result.message}`, 'error');
+                        this.updateSyncStatus('error', '连接失败');
+                    }
+                } catch (error) {
+                    this.setConnectionStatus('error', `连接异常: ${error.message}`);
+                    this.syncManager.addLog(`连接异常: ${error.message}`, 'error');
+                    this.updateSyncStatus('error', '连接异常');
+                } finally {
+                    document.getElementById('connectWebDAV').disabled = false;
+                }
+            }
+
+            async disconnectWebDAV() {
+                await this.webDAVManager.disconnect();
+                this.setConnectionStatus('disconnected', '未连接');
+                document.getElementById('connectWebDAV').style.display = 'inline-block';
+                document.getElementById('disconnectWebDAV').style.display = 'none';
+                document.getElementById('uploadData').disabled = true;
+                document.getElementById('downloadData').disabled = true;
+                this.updateSyncStatus('disconnected', '未连接');
+                this.syncManager.addLog('已断开WebDAV连接', 'info');
+            }
+
+            async uploadData() {
+                this.setLoading('uploadData', true);
+                const result = await this.syncManager.sync('upload');
+                this.setLoading('uploadData', false);
+
+                if (result.success) {
+                    this.updateSyncStatus('connected', '上传成功');
+                    alert('数据上传成功！');
+                } else {
+                    this.updateSyncStatus('error', '上传失败');
+                    alert(`上传失败: ${result.message}`);
+                }
+            }
+
+            async downloadData() {
+                this.setLoading('downloadData', true);
+                const result = await this.syncManager.sync('download');
+                this.setLoading('downloadData', false);
+
+                if (result.success) {
+                    this.updateSyncStatus('connected', '下载成功');
+                    this.renderCalendar();
+                    this.renderData();
+                    alert('数据下载成功！');
+                } else {
+                    this.updateSyncStatus('error', '下载失败');
+                    alert(`下载失败: ${result.message}`);
+                }
+            }
+
+            async quickSync() {
+                if (!this.webDAVManager.isConnected) {
+                    alert('请先连接WebDAV服务器');
+                    return;
+                }
+
+                this.setLoading('quickSync', true);
+                const result = await this.syncManager.sync('auto');
+                this.setLoading('quickSync', false);
+
+                if (result.success) {
+                    this.updateSyncStatus('connected', '同步完成');
+                    this.renderCalendar();
+                    this.renderData();
+                } else {
+                    this.updateSyncStatus('error', '同步失败');
+                    alert(`同步失败: ${result.message}`);
+                }
+            }
+
+            setConnectionStatus(status, text) {
+                const dot = document.getElementById('statusDot');
+                const statusText = document.getElementById('statusText');
+                const connStatus = document.getElementById('connectionStatus');
+                const connStatusText = document.getElementById('connectionStatusText');
+
+                dot.className = 'status-dot';
+                if (status === 'connected') {
+                    dot.classList.add('connected');
+                    connStatus.className = 'connection-status connected';
+                } else if (status === 'error') {
+                    dot.classList.add('error');
+                    connStatus.className = 'connection-status error';
+                } else {
+                    connStatus.className = 'connection-status disconnected';
+                }
+
+                statusText.textContent = text;
+                connStatusText.textContent = text;
+            }
+
+            updateSyncStatus(status, text) {
+                const dot = document.getElementById('statusDot');
+                const statusText = document.getElementById('statusText');
+
+                dot.className = 'status-dot';
+                if (status === 'connected') {
+                    dot.classList.add('connected');
+                } else if (status === 'error') {
+                    dot.classList.add('error');
+                }
+
+                statusText.textContent = text;
+            }
+
+            setLoading(buttonId, loading) {
+                const button = document.getElementById(buttonId);
+                if (loading) {
+                    button.classList.add('loading');
+                    button.disabled = true;
+                    if (buttonId === 'quickSync') {
+                        button.innerHTML = '<span class="spinner"></span> 同步中...';
+                    }
+                } else {
+                    button.classList.remove('loading');
+                    button.disabled = false;
+                    if (buttonId === 'quickSync') {
+                        button.innerHTML = '🔄 同步';
+                    }
+                }
+            }
         }
 
-        // 格式化日期
-        function formatDate(date) {
-            const year = date.getFullYear();
-            const month = String(date.getMonth() + 1).padStart(2, '0');
-            const day = String(date.getDate()).padStart(2, '0');
-            return `${year}-${month}-${day}`;
-        }
-
-        // 页面加载完成后初始化
-        document.addEventListener('DOMContentLoaded', init);
+        // 启动应用
+        let app;
+        document.addEventListener('DOMContentLoaded', () => {
+            app = new ClockApp();
+            window.app = app;
+        });
     </script>
 </body>
 </html>

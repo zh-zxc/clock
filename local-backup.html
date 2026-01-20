@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>时钟数据本地备份工具</title>
+    <style>
+        :root {
+            --primary: #4cc9f0; --secondary: #f72585; --accent: #4361ee;
+            --success: #00d084; --error: #ff4d4d; --warning: #ffb84d;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh; display: flex; justify-content: center; align-items: center;
+            padding: 20px;
+        }
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 30px;
+            max-width: 600px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+        h1 { color: var(--primary); text-align: center; margin-bottom: 10px; }
+        .subtitle { text-align: center; color: #666; margin-bottom: 30px; }
+        .section { margin-bottom: 25px; padding: 20px; background: #f8f9fa; border-radius: 12px; }
+        .section h2 { color: var(--accent); margin-bottom: 15px; font-size: 1.2rem; }
+        .btn-group { display: flex; gap: 10px; flex-wrap: wrap; }
+        button {
+            padding: 12px 20px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;
+            transition: all 0.3s ease; flex: 1; min-width: 120px; font-size: 14px;
+        }
+        button:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2); }
+        button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+        .btn-primary { background: linear-gradient(45deg, var(--primary), var(--accent)); color: white; }
+        .btn-success { background: linear-gradient(45deg, var(--success), #00a86b); color: white; }
+        .btn-warning { background: linear-gradient(45deg, var(--warning), #ff9800); color: white; }
+        .btn-danger { background: linear-gradient(45deg, var(--error), #cc0000); color: white; }
+        .btn-secondary { background: #6c757d; color: white; }
+        .status {
+            margin-top: 15px; padding: 12px; border-radius: 8px; font-size: 14px; display: none;
+        }
+        .status.success { background: rgba(0, 208, 132, 0.1); color: var(--success); border: 1px solid var(--success); }
+        .status.error { background: rgba(255, 77, 77, 0.1); color: var(--error); border: 1px solid var(--error); }
+        .status.info { background: rgba(76, 201, 240, 0.1); color: var(--primary); border: 1px solid var(--primary); }
+        .file-input-wrapper {
+            position: relative; overflow: hidden; display: inline-block; width: 100%;
+        }
+        .file-input-wrapper input[type=file] {
+            position: absolute; left: 0; top: 0; opacity: 0; width: 100%; height: 100%; cursor: pointer;
+        }
+        .file-input-label {
+            display: block; padding: 12px; background: white; border: 2px dashed #ccc; border-radius: 8px;
+            text-align: center; color: #666; cursor: pointer; transition: all 0.3s ease;
+        }
+        .file-input-label:hover { border-color: var(--primary); color: var(--primary); }
+        .info-box {
+            background: rgba(76, 201, 240, 0.1); border-left: 4px solid var(--primary);
+            padding: 15px; border-radius: 8px; margin-top: 20px; font-size: 14px; line-height: 1.6;
+        }
+        .info-box h3 { color: var(--primary); margin-bottom: 8px; font-size: 1rem; }
+        .info-box ul { margin-left: 20px; }
+        .info-box li { margin-bottom: 5px; }
+        .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 15px; }
+        .stat-item { background: white; padding: 10px; border-radius: 8px; text-align: center; }
+        .stat-label { font-size: 12px; color: #666; }
+        .stat-value { font-size: 18px; font-weight: bold; color: var(--primary); }
+        @media (max-width: 480px) {
+            .container { padding: 20px; }
+            .btn-group { flex-direction: column; }
+            button { width: 100%; }
+            .stats { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>⏰ 时钟数据备份工具</h1>
+        <p class="subtitle">本地数据备份与恢复</p>
+
+        <!-- 数据统计 -->
+        <div class="section">
+            <h2>📊 数据统计</h2>
+            <div class="stats">
+                <div class="stat-item">
+                    <div class="stat-label">记事数量</div>
+                    <div class="stat-value" id="note-count">0</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">消费记录</div>
+                    <div class="stat-value" id="expense-count">0</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">总消费</div>
+                    <div class="stat-value" id="total-expense">¥0</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 备份功能 -->
+        <div class="section">
+            <h2>💾 备份数据</h2>
+            <div class="btn-group">
+                <button class="btn-primary" onclick="exportData()">导出数据到文件</button>
+                <button class="btn-success" onclick="copyToClipboard()">复制到剪贴板</button>
+            </div>
+            <div id="export-status" class="status"></div>
+        </div>
+
+        <!-- 恢复功能 -->
+        <div class="section">
+            <h2>📂 恢复数据</h2>
+            <div class="file-input-wrapper">
+                <input type="file" id="file-input" accept=".json" onchange="importData(event)">
+                <label for="file-input" class="file-input-label">
+                    📁 点击选择备份文件或拖拽文件到此处
+                </label>
+            </div>
+            <div class="btn-group" style="margin-top: 10px;">
+                <button class="btn-warning" onclick="pasteFromClipboard()">从剪贴板粘贴</button>
+                <button class="btn-danger" onclick="clearAllData()">清空所有数据</button>
+            </div>
+            <div id="import-status" class="status"></div>
+        </div>
+
+        <!-- 使用说明 -->
+        <div class="info-box">
+            <h3>💡 使用说明</h3>
+            <ul>
+                <li><strong>导出数据：</strong>将所有记事和消费记录保存为JSON文件</li>
+                <li><strong>复制到剪贴板：</strong>快速复制数据，方便粘贴到其他地方</li>
+                <li><strong>恢复数据：</strong>选择备份文件恢复数据</li>
+                <li><strong>从剪贴板恢复：</strong>粘贴之前复制的JSON数据</li>
+                <li><strong>清空数据：</strong>删除所有本地数据（谨慎操作）</li>
+            </ul>
+            <p style="margin-top: 10px; color: #666;">
+                💡 <strong>提示：</strong>建议定期备份数据，防止数据丢失。
+                您可以将备份文件保存到云盘（如百度网盘、阿里云盘等）。
+            </p>
+        </div>
+    </div>
+
+    <script>
+        // 配置
+        const STORAGE_KEYS = {
+            NOTES: 'clock_notes',
+            EXPENSES: 'clock_expenses'
+        };
+
+        // 工具函数
+        const Utils = {
+            formatCurrency(amount) {
+                return `¥${amount.toFixed(2)}`;
+            },
+            getCurrentTimestamp() {
+                return new Date().toISOString();
+            },
+            downloadFile(content, filename, contentType) {
+                const blob = new Blob([content], { type: contentType });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            },
+            async copyToClipboard(text) {
+                try {
+                    await navigator.clipboard.writeText(text);
+                    return true;
+                } catch (err) {
+                    // 降级方案
+                    const textarea = document.createElement('textarea');
+                    textarea.value = text;
+                    document.body.appendChild(textarea);
+                    textarea.select();
+                    try {
+                        document.execCommand('copy');
+                        document.body.removeChild(textarea);
+                        return true;
+                    } catch (e) {
+                        document.body.removeChild(textarea);
+                        return false;
+                    }
+                }
+            },
+            async readFromClipboard() {
+                try {
+                    return await navigator.clipboard.readText();
+                } catch (err) {
+                    return null;
+                }
+            }
+        };
+
+        // 数据管理器
+        class DataManager {
+            static getData(key, defaultValue = {}) {
+                try {
+                    const data = localStorage.getItem(key);
+                    return data ? JSON.parse(data) : defaultValue;
+                } catch (error) {
+                    console.error(`读取数据失败: ${key}`, error);
+                    return defaultValue;
+                }
+            }
+
+            static setData(key, data) {
+                try {
+                    localStorage.setItem(key, JSON.stringify(data));
+                    return true;
+                } catch (error) {
+                    console.error(`保存数据失败: ${key}`, error);
+                    return false;
+                }
+            }
+
+            static removeData(key) {
+                try {
+                    localStorage.removeItem(key);
+                    return true;
+                } catch (error) {
+                    console.error(`删除数据失败: ${key}`, error);
+                    return false;
+                }
+            }
+
+            static getAllData() {
+                return {
+                    notes: this.getData(STORAGE_KEYS.NOTES, {}),
+                    expenses: this.getData(STORAGE_KEYS.EXPENSES, {}),
+                    version: '1.0',
+                    exportTime: Utils.getCurrentTimestamp(),
+                    source: '时钟应用备份'
+                };
+            }
+
+            static importAllData(data) {
+                try {
+                    if (data.notes) {
+                        this.setData(STORAGE_KEYS.NOTES, data.notes);
+                    }
+                    if (data.expenses) {
+                        this.setData(STORAGE_KEYS.EXPENSES, data.expenses);
+                    }
+                    return true;
+                } catch (error) {
+                    console.error('导入数据失败:', error);
+                    return false;
+                }
+            }
+
+            static clearAll() {
+                try {
+                    this.removeData(STORAGE_KEYS.NOTES);
+                    this.removeData(STORAGE_KEYS.EXPENSES);
+                    return true;
+                } catch (error) {
+                    console.error('清空数据失败:', error);
+                    return false;
+                }
+            }
+
+            static getStats() {
+                const notes = this.getData(STORAGE_KEYS.NOTES, {});
+                const expenses = this.getData(STORAGE_KEYS.EXPENSES, {});
+                
+                let noteCount = 0;
+                let expenseCount = 0;
+                let totalExpense = 0;
+
+                // 统计记事
+                Object.values(notes).forEach(noteList => {
+                    noteCount += noteList.length;
+                });
+
+                // 统计消费
+                Object.values(expenses).forEach(expenseList => {
+                    expenseCount += expenseList.length;
+                    expenseList.forEach(expense => {
+                        totalExpense += expense.amount || 0;
+                    });
+                });
+
+                return { noteCount, expenseCount, totalExpense };
+            }
+        }
+
+        // UI管理器
+        class UIManager {
+            static showStatus(elementId, message, type = 'info') {
+                const element = document.getElementById(elementId);
+                if (!element) return;
+
+                element.textContent = message;
+                element.className = `status ${type}`;
+                element.style.display = 'block';
+
+                // 3秒后自动隐藏
+                setTimeout(() => {
+                    element.style.display = 'none';
+                }, 3000);
+            }
+
+            static hideStatus(elementId) {
+                const element = document.getElementById(elementId);
+                if (element) {
+                    element.style.display = 'none';
+                }
+            }
+
+            static updateStats() {
+                const stats = DataManager.getStats();
+                
+                const noteCountEl = document.getElementById('note-count');
+                const expenseCountEl = document.getElementById('expense-count');
+                const totalExpenseEl = document.getElementById('total-expense');
+
+                if (noteCountEl) noteCountEl.textContent = stats.noteCount;
+                if (expenseCountEl) expenseCountEl.textContent = stats.expenseCount;
+                if (totalExpenseEl) totalExpenseEl.textContent = Utils.formatCurrency(stats.totalExpense);
+            }
+        }
+
+        // 导出功能
+        function exportData() {
+            try {
+                const data = DataManager.getAllData();
+                const json = JSON.stringify(data, null, 2);
+                const filename = `时钟数据备份_${new Date().toLocaleDateString('zh-CN')}.json`;
+                
+                Utils.downloadFile(json, filename, 'application/json');
+                
+                UIManager.showStatus('export-status', '✅ 数据已导出到下载文件夹', 'success');
+            } catch (error) {
+                UIManager.showStatus('export-status', `❌ 导出失败: ${error.message}`, 'error');
+            }
+        }
+
+        // 复制到剪贴板
+        async function copyToClipboard() {
+            try {
+                const data = DataManager.getAllData();
+                const json = JSON.stringify(data, null, 2);
+                
+                const success = await Utils.copyToClipboard(json);
+                
+                if (success) {
+                    UIManager.showStatus('export-status', '✅ 数据已复制到剪贴板', 'success');
+                } else {
+                    UIManager.showStatus('export-status', '❌ 复制失败，请手动复制', 'error');
+                }
+            } catch (error) {
+                UIManager.showStatus('export-status', `❌ 复制失败: ${error.message}`, 'error');
+            }
+        }
+
+        // 导入数据
+        function importData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    
+                    // 验证数据格式
+                    if (!data.notes || !data.expenses) {
+                        throw new Error('无效的备份文件格式');
+                    }
+
+                    const success = DataManager.importAllData(data);
+                    
+                    if (success) {
+                        UIManager.showStatus('import-status', '✅ 数据恢复成功！', 'success');
+                        UIManager.updateStats();
+                    } else {
+                        UIManager.showStatus('import-status', '❌ 数据恢复失败', 'error');
+                    }
+                } catch (error) {
+                    UIManager.showStatus('import-status', `❌ 文件解析失败: ${error.message}`, 'error');
+                }
+            };
+            reader.onerror = function() {
+                UIManager.showStatus('import-status', '❌ 文件读取失败', 'error');
+            };
+            reader.readAsText(file);
+
+            // 清空文件输入
+            event.target.value = '';
+        }
+
+        // 从剪贴板粘贴
+        async function pasteFromClipboard() {
+            try {
+                const text = await Utils.readFromClipboard();
+                
+                if (!text) {
+                    UIManager.showStatus('import-status', '❌ 剪贴板为空或无权限访问', 'error');
+                    return;
+                }
+
+                const data = JSON.parse(text);
+                
+                // 验证数据格式
+                if (!data.notes || !data.expenses) {
+                    throw new Error('剪贴板数据格式无效');
+                }
+
+                const success = DataManager.importAllData(data);
+                
+                if (success) {
+                    UIManager.showStatus('import-status', '✅ 数据恢复成功！', 'success');
+                    UIManager.updateStats();
+                } else {
+                    UIManager.showStatus('import-status', '❌ 数据恢复失败', 'error');
+                }
+            } catch (error) {
+                UIManager.showStatus('import-status', `❌ 恢复失败: ${error.message}`, 'error');
+            }
+        }
+
+        // 清空所有数据
+        function clearAllData() {
+            if (!confirm('确定要清空所有数据吗？此操作不可恢复！')) {
+                return;
+            }
+
+            try {
+                const success = DataManager.clearAll();
+                
+                if (success) {
+                    UIManager.showStatus('import-status', '✅ 所有数据已清空', 'success');
+                    UIManager.updateStats();
+                } else {
+                    UIManager.showStatus('import-status', '❌ 清空数据失败', 'error');
+                }
+            } catch (error) {
+                UIManager.showStatus('import-status', `❌ 清空失败: ${error.message}`, 'error');
+            }
+        }
+
+        // 拖拽上传支持
+        function setupDragAndDrop() {
+            const dropZone = document.querySelector('.file-input-label');
+            
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                dropZone.addEventListener(eventName, preventDefaults, false);
+            });
+
+            function preventDefaults(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+
+            ['dragenter', 'dragover'].forEach(eventName => {
+                dropZone.addEventListener(eventName, () => {
+                    dropZone.style.borderColor = 'var(--primary)';
+                    dropZone.style.backgroundColor = 'rgba(76, 201, 240, 0.1)';
+                }, false);
+            });
+
+            ['dragleave', 'drop'].forEach(eventName => {
+                dropZone.addEventListener(eventName, () => {
+                    dropZone.style.borderColor = '#ccc';
+                    dropZone.style.backgroundColor = 'white';
+                }, false);
+            });
+
+            dropZone.addEventListener('drop', (e) => {
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    const file = files[0];
+                    if (file.type === 'application/json' || file.name.endsWith('.json')) {
+                        const event = { target: { files: [file] } };
+                        importData(event);
+                    } else {
+                        UIManager.showStatus('import-status', '❌ 请选择JSON文件', 'error');
+                    }
+                }
+            }, false);
+        }
+
+        // 页面加载时更新统计
+        document.addEventListener('DOMContentLoaded', () => {
+            UIManager.updateStats();
+            setupDragAndDrop();
+        });
+    </script>
+</body>
+</html>
