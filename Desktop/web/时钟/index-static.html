@@ -983,6 +983,91 @@
             }
         }
 
+        /* 贪吃蛇游戏板 */
+        .snake-board {
+            display: grid;
+            grid-template-columns: repeat(15, 1fr);
+            gap: 1px;
+            max-width: 450px;
+            margin: 0 auto;
+            width: 100%;
+            background: rgba(255,255,255,0.1);
+            border-radius: 8px;
+            padding: 4px;
+            aspect-ratio: 1;
+        }
+
+        .snake-cell {
+            aspect-ratio: 1;
+            background: rgba(255,255,255,0.05);
+            border-radius: 2px;
+            transition: all 0.1s ease;
+        }
+
+        .snake-cell.snake {
+            background: linear-gradient(135deg, var(--success), #06d6a0);
+            border-radius: 3px;
+            box-shadow: 0 0 5px rgba(0, 208, 132, 0.5);
+        }
+
+        .snake-cell.snake-head {
+            background: linear-gradient(135deg, var(--primary-dark), var(--primary-light));
+            border-radius: 4px;
+            box-shadow: 0 0 8px rgba(76, 201, 240, 0.7);
+        }
+
+        .snake-cell.food {
+            background: linear-gradient(135deg, var(--accent-dark), var(--accent-light));
+            border-radius: 50%;
+            animation: pulse 0.5s ease infinite alternate;
+            box-shadow: 0 0 8px rgba(247, 37, 133, 0.7);
+        }
+
+        @keyframes pulse {
+            from { transform: scale(0.8); }
+            to { transform: scale(1); }
+        }
+
+        .snake-cell.wall {
+            background: linear-gradient(135deg, var(--danger), #ff6b6b);
+            border-radius: 2px;
+        }
+
+        /* 游戏切换按钮样式 */
+        .game-tabs .btn {
+            flex: 1;
+            min-width: 120px;
+        }
+
+        .game-tabs .btn.btn-primary {
+            background: linear-gradient(135deg, var(--primary-dark), #3a86ff);
+        }
+
+        .game-tabs .btn.btn-secondary {
+            background: linear-gradient(135deg, var(--gray), #495057);
+        }
+
+        .game-tabs .btn.active {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px var(--shadow-dark);
+            border: 2px solid var(--primary-dark);
+        }
+
+        /* 响应式贪吃蛇游戏板 */
+        @media (max-width: 480px) {
+            .snake-board {
+                grid-template-columns: repeat(12, 1fr);
+                max-width: 360px;
+            }
+        }
+
+        @media (max-width: 360px) {
+            .snake-board {
+                grid-template-columns: repeat(10, 1fr);
+                max-width: 300px;
+            }
+        }
+
         /* 打印样式 */
         @media print {
             .header-actions,
@@ -1123,7 +1208,15 @@
                 <span aria-hidden="true">🎮</span>
                 <span>小游戏</span>
             </div>
-            <div class="game-container">
+            
+            <!-- 游戏切换按钮 -->
+            <div class="game-tabs" style="display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap;">
+                <button class="btn btn-primary" id="tabMemory" aria-label="切换到记忆翻牌游戏">记忆翻牌</button>
+                <button class="btn btn-secondary" id="tabSnake" aria-label="切换到贪吃蛇游戏">贪吃蛇</button>
+            </div>
+
+            <!-- 记忆翻牌游戏 -->
+            <div id="memoryGameContainer" class="game-container">
                 <div class="game-info">
                     <div class="game-stats">
                         <div class="stat-item">
@@ -1146,6 +1239,35 @@
                 </div>
                 <div class="game-board" id="gameBoard" role="grid" aria-label="游戏板"></div>
                 <div class="game-message" id="gameMessage"></div>
+            </div>
+
+            <!-- 贪吃蛇游戏 -->
+            <div id="snakeGameContainer" class="game-container" style="display: none;">
+                <div class="game-info">
+                    <div class="game-stats">
+                        <div class="stat-item">
+                            <div class="stat-label">得分</div>
+                            <div class="stat-value" id="snakeScore">0</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">长度</div>
+                            <div class="stat-value" id="snakeLength">1</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">最佳</div>
+                            <div class="stat-value" id="snakeBest">--</div>
+                        </div>
+                    </div>
+                    <div class="game-controls">
+                        <button class="btn btn-primary" id="startSnake" aria-label="开始贪吃蛇游戏">开始游戏</button>
+                        <button class="btn btn-secondary" id="resetSnake" aria-label="重置贪吃蛇游戏">重置</button>
+                    </div>
+                </div>
+                <div class="snake-board" id="snakeBoard" role="grid" aria-label="贪吃蛇游戏板"></div>
+                <div class="game-message" id="snakeMessage"></div>
+                <div style="text-align: center; color: #888; font-size: 13px; margin-top: 10px;">
+                    使用方向键或WASD控制蛇的移动
+                </div>
             </div>
         </section>
 
@@ -1622,6 +1744,311 @@
             }
         }
 
+        // ==================== 贪吃蛇游戏模块 ====================
+        class SnakeGame {
+            constructor() {
+                this.boardSize = 15;
+                this.snake = [];
+                this.direction = { x: 1, y: 0 };
+                this.nextDirection = { x: 1, y: 0 };
+                this.food = null;
+                this.score = 0;
+                this.gameInterval = null;
+                this.gameSpeed = 150;
+                this.isGameActive = false;
+                this.storageKey = 'clock_snake_best';
+            }
+
+            // 初始化游戏
+            init() {
+                this.loadBestScore();
+                this.setupEventListeners();
+                this.renderBoard();
+                this.updateStats();
+            }
+
+            // 设置事件监听器
+            setupEventListeners() {
+                const startBtn = document.getElementById('startSnake');
+                const resetBtn = document.getElementById('resetSnake');
+
+                if (startBtn) {
+                    startBtn.addEventListener('click', () => this.startGame());
+                }
+
+                if (resetBtn) {
+                    resetBtn.addEventListener('click', () => this.resetGame());
+                }
+
+                // 键盘控制
+                document.addEventListener('keydown', (e) => {
+                    if (!this.isGameActive) return;
+
+                    const key = e.key.toLowerCase();
+                    const newDirection = { ...this.nextDirection };
+
+                    switch(key) {
+                        case 'arrowup':
+                        case 'w':
+                            if (this.direction.y === 0) {
+                                newDirection.x = 0;
+                                newDirection.y = -1;
+                            }
+                            break;
+                        case 'arrowdown':
+                        case 's':
+                            if (this.direction.y === 0) {
+                                newDirection.x = 0;
+                                newDirection.y = 1;
+                            }
+                            break;
+                        case 'arrowleft':
+                        case 'a':
+                            if (this.direction.x === 0) {
+                                newDirection.x = -1;
+                                newDirection.y = 0;
+                            }
+                            break;
+                        case 'arrowright':
+                        case 'd':
+                            if (this.direction.x === 0) {
+                                newDirection.x = 1;
+                                newDirection.y = 0;
+                            }
+                            break;
+                    }
+
+                    this.nextDirection = newDirection;
+                });
+            }
+
+            // 开始游戏
+            startGame() {
+                if (this.isGameActive) return;
+
+                this.isGameActive = true;
+                this.score = 0;
+                this.direction = { x: 1, y: 0 };
+                this.nextDirection = { x: 1, y: 0 };
+                this.gameSpeed = 150;
+
+                // 初始化蛇（3节）
+                this.snake = [
+                    { x: 7, y: 7 },
+                    { x: 6, y: 7 },
+                    { x: 5, y: 7 }
+                ];
+
+                this.spawnFood();
+                this.renderBoard();
+                this.updateStats();
+                this.showMessage('游戏开始！使用方向键或WASD控制', 'info');
+                this.startTimer();
+            }
+
+            // 重置游戏
+            resetGame() {
+                this.stopTimer();
+                this.isGameActive = false;
+                this.score = 0;
+                this.snake = [];
+                this.direction = { x: 1, y: 0 };
+                this.nextDirection = { x: 1, y: 0 };
+                this.food = null;
+
+                this.renderBoard();
+                this.updateStats();
+                this.showMessage('点击"开始游戏"开始挑战！', 'info');
+            }
+
+            // 开始计时器
+            startTimer() {
+                this.stopTimer();
+                this.gameInterval = setInterval(() => {
+                    this.update();
+                }, this.gameSpeed);
+            }
+
+            // 停止计时器
+            stopTimer() {
+                if (this.gameInterval) {
+                    clearInterval(this.gameInterval);
+                    this.gameInterval = null;
+                }
+            }
+
+            // 生成食物
+            spawnFood() {
+                let newFood;
+                do {
+                    newFood = {
+                        x: Math.floor(Math.random() * this.boardSize),
+                        y: Math.floor(Math.random() * this.boardSize)
+                    };
+                } while (this.snake.some(segment => segment.x === newFood.x && segment.y === newFood.y));
+                
+                this.food = newFood;
+            }
+
+            // 更新游戏状态
+            update() {
+                if (!this.isGameActive) return;
+
+                // 更新方向
+                this.direction = { ...this.nextDirection };
+
+                // 计算新头部位置
+                const head = { ...this.snake[0] };
+                head.x += this.direction.x;
+                head.y += this.direction.y;
+
+                // 检查碰撞（墙壁）
+                if (head.x < 0 || head.x >= this.boardSize || head.y < 0 || head.y >= this.boardSize) {
+                    this.gameOver();
+                    return;
+                }
+
+                // 检查碰撞（自身）
+                if (this.snake.some(segment => segment.x === head.x && segment.y === head.y)) {
+                    this.gameOver();
+                    return;
+                }
+
+                // 添加新头部
+                this.snake.unshift(head);
+
+                // 检查是否吃到食物
+                if (this.food && head.x === this.food.x && head.y === this.food.y) {
+                    this.score += 10;
+                    this.spawnFood();
+                    
+                    // 加快游戏速度（每吃5个食物加快一次）
+                    if (this.score % 50 === 0 && this.gameSpeed > 50) {
+                        this.gameSpeed -= 10;
+                        this.startTimer();
+                    }
+                } else {
+                    // 没吃到食物，移除尾部
+                    this.snake.pop();
+                }
+
+                this.renderBoard();
+                this.updateStats();
+            }
+
+            // 渲染游戏板
+            renderBoard() {
+                const board = document.getElementById('snakeBoard');
+                if (!board) return;
+
+                board.innerHTML = '';
+
+                // 创建网格
+                for (let y = 0; y < this.boardSize; y++) {
+                    for (let x = 0; x < this.boardSize; x++) {
+                        const cell = document.createElement('div');
+                        cell.className = 'snake-cell';
+                        cell.setAttribute('role', 'gridcell');
+                        cell.setAttribute('aria-label', `位置 ${x},${y}`);
+
+                        // 检查是否是蛇身
+                        const isSnake = this.snake.some(segment => segment.x === x && segment.y === y);
+                        const isHead = this.snake.length > 0 && this.snake[0].x === x && this.snake[0].y === y;
+                        const isFood = this.food && this.food.x === x && this.food.y === y;
+
+                        if (isHead) {
+                            cell.classList.add('snake-head');
+                        } else if (isSnake) {
+                            cell.classList.add('snake');
+                        } else if (isFood) {
+                            cell.classList.add('food');
+                        }
+
+                        board.appendChild(cell);
+                    }
+                }
+            }
+
+            // 更新统计
+            updateStats() {
+                const scoreElement = document.getElementById('snakeScore');
+                const lengthElement = document.getElementById('snakeLength');
+                const bestElement = document.getElementById('snakeBest');
+
+                if (scoreElement) scoreElement.textContent = this.score;
+                if (lengthElement) lengthElement.textContent = this.snake.length;
+
+                const bestScore = this.getBestScore();
+                if (bestElement && bestScore) {
+                    bestElement.textContent = `${bestScore.score}分/${bestScore.length}节`;
+                } else if (bestElement) {
+                    bestElement.textContent = '--';
+                }
+            }
+
+            // 显示消息
+            showMessage(text, type = 'info') {
+                const messageElement = document.getElementById('snakeMessage');
+                if (!messageElement) return;
+
+                messageElement.textContent = text;
+                messageElement.className = `game-message ${type}`;
+            }
+
+            // 游戏结束
+            gameOver() {
+                this.stopTimer();
+                this.isGameActive = false;
+
+                const bestScore = this.getBestScore();
+                const isNewRecord = !bestScore || this.score > bestScore.score;
+
+                if (isNewRecord) {
+                    this.saveBestScore();
+                    this.showMessage(`💀 游戏结束！新纪录！得分：${this.score}，长度：${this.snake.length}节`, 'success');
+                } else {
+                    this.showMessage(`💀 游戏结束！得分：${this.score}，长度：${this.snake.length}节`, 'warning');
+                }
+
+                this.updateStats();
+            }
+
+            // 获取最佳成绩
+            getBestScore() {
+                try {
+                    const data = localStorage.getItem(this.storageKey);
+                    return data ? JSON.parse(data) : null;
+                } catch (error) {
+                    console.warn('Failed to load snake best score:', error);
+                    return null;
+                }
+            }
+
+            // 保存最佳成绩
+            saveBestScore() {
+                try {
+                    const bestScore = {
+                        score: this.score,
+                        length: this.snake.length,
+                        date: new Date().toISOString()
+                    };
+                    localStorage.setItem(this.storageKey, JSON.stringify(bestScore));
+                } catch (error) {
+                    console.warn('Failed to save snake best score:', error);
+                }
+            }
+
+            // 加载最佳成绩
+            loadBestScore() {
+                // 已在getBestScore中处理
+            }
+
+            // 销毁游戏
+            destroy() {
+                this.stopTimer();
+            }
+        }
+
         // ==================== 主应用模块 ====================
         class ClockApp {
             constructor() {
@@ -1630,7 +2057,9 @@
                 this.isDarkTheme = true;
                 this.clockInterval = null;
                 this.isInitialized = false;
-                this.game = new MemoryGame();
+                this.memoryGame = new MemoryGame();
+                this.snakeGame = new SnakeGame();
+                this.currentGame = 'memory'; // 'memory' or 'snake'
                 this.init();
             }
 
@@ -1646,7 +2075,8 @@
                     this.renderData();
                     
                     // 初始化游戏
-                    this.game.init();
+                    this.memoryGame.init();
+                    this.snakeGame.init();
                     
                     // 定期清理旧数据（每天一次）
                     this.scheduleCleanup();
@@ -1706,6 +2136,10 @@
                 document.getElementById('saveNote').addEventListener('click', () => this.saveNote());
                 document.getElementById('saveExpense').addEventListener('click', () => this.saveExpense());
 
+                // 游戏切换按钮
+                document.getElementById('tabMemory').addEventListener('click', () => this.switchGame('memory'));
+                document.getElementById('tabSnake').addEventListener('click', () => this.switchGame('snake'));
+
                 // 键盘快捷键
                 document.getElementById('noteInput').addEventListener('keydown', (e) => {
                     if (e.key === 'Enter' && e.ctrlKey) {
@@ -1740,6 +2174,38 @@
                         document.activeElement?.blur();
                     }
                 });
+            }
+
+            // 切换游戏
+            switchGame(gameType) {
+                this.currentGame = gameType;
+                
+                const memoryContainer = document.getElementById('memoryGameContainer');
+                const snakeContainer = document.getElementById('snakeGameContainer');
+                const tabMemory = document.getElementById('tabMemory');
+                const tabSnake = document.getElementById('tabSnake');
+
+                if (gameType === 'memory') {
+                    memoryContainer.style.display = 'flex';
+                    snakeContainer.style.display = 'none';
+                    tabMemory.classList.add('btn-primary');
+                    tabMemory.classList.remove('btn-secondary');
+                    tabSnake.classList.add('btn-secondary');
+                    tabSnake.classList.remove('btn-primary');
+                    
+                    // 停止贪吃蛇游戏
+                    this.snakeGame.stopTimer();
+                } else {
+                    memoryContainer.style.display = 'none';
+                    snakeContainer.style.display = 'flex';
+                    tabMemory.classList.add('btn-secondary');
+                    tabMemory.classList.remove('btn-primary');
+                    tabSnake.classList.add('btn-primary');
+                    tabSnake.classList.remove('btn-secondary');
+                    
+                    // 停止记忆翻牌游戏
+                    this.memoryGame.stopTimer();
+                }
             }
 
             // 启动时钟
