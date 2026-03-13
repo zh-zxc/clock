@@ -1391,7 +1391,7 @@
 
         function parseDateKey(key) {
             const parts = key.split('-').map(Number);
-            if (parts.length !== 3 || parts.some((part) => Number.isNaN(part))) return null;
+            if (parts.length !== 3 || parts.some((numericPart) => Number.isNaN(numericPart))) return null;
             const [year, month, day] = parts;
             const daysInMonth = new Date(year, month, 0).getDate();
             if (year <= 0 || month < 1 || month > 12 || day < 1 || day > daysInMonth) return null;
