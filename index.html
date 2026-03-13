@@ -972,7 +972,7 @@
                 Math.min(currentDay, monthLastDay)
             );
 
-            // Month switch may shift the selected day (e.g., 31 -> 30), so refresh all dependent views
+            // Month switch may shift the selected day (e.g., 31 -> 30), so refresh all dependent views to show data for the adjusted date
             renderCalendar();
             renderNotes();
             renderExpenses();
@@ -1282,7 +1282,7 @@
             let expenseDays = 0;
             Object.entries(state.expenses).forEach(([key, expensesForDay]) => {
                 const expenseDate = parseDateKey(key);
-                if (expenseDate && expenseDate.getFullYear() === year && expenseDate.getMonth() === month) {
+                if (isDateInMonth(expenseDate, year, month)) {
                     monthExpense += expensesForDay.reduce((sum, expense) => sum + expense.amount, 0);
                     expenseDays += 1;
                 }
@@ -1391,7 +1391,7 @@
 
         function parseDateKey(key) {
             const parts = key.split('-').map(Number);
-            if (parts.length !== 3 || parts.some((component) => Number.isNaN(component))) return null;
+            if (parts.length !== 3 || parts.some((numericValue) => Number.isNaN(numericValue))) return null;
             const [year, month, day] = parts;
             const daysInMonth = new Date(year, month, 0).getDate();
             if (year <= 0 || month < 1 || month > 12 || day < 1 || day > daysInMonth) return null;
@@ -1401,6 +1401,10 @@
                 parsed.getMonth() === month - 1 &&
                 parsed.getDate() === day;
             return isSameDate ? parsed : null;
+        }
+
+        function isDateInMonth(date, year, month) {
+            return date && date.getFullYear() === year && date.getMonth() === month;
         }
 
         // 页面加载完成后初始化
