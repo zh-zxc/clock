@@ -1391,9 +1391,10 @@
 
         function parseDateKey(key) {
             const parts = key.split('-').map(Number);
-            if (parts.length !== 3 || parts.some((part) => Number.isNaN(part))) return null;
+            if (parts.length !== 3 || parts.some((value) => Number.isNaN(value))) return null;
             const [year, month, day] = parts;
-            const daysInMonth = new Date(year, month, 0).getDate();
+            const monthIndex = month - 1;
+            const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
             // Limit to AD years; adjust here if historical years need to be supported
             if (year < 1 || month < 1 || month > 12 || day < 1 || day > daysInMonth) return null;
             const parsed = new Date(year, month - 1, day);
