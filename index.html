@@ -954,8 +954,28 @@
 
         // 切换月份
         function changeMonth(delta) {
-            state.selectedDate.setMonth(state.selectedDate.getMonth() + delta);
+            const currentDay = state.selectedDate.getDate();
+            const tentativeDate = new Date(
+                state.selectedDate.getFullYear(),
+                state.selectedDate.getMonth() + delta,
+                1
+            );
+            const monthLastDay = new Date(
+                tentativeDate.getFullYear(),
+                tentativeDate.getMonth() + 1,
+                0
+            ).getDate();
+            
+            state.selectedDate = new Date(
+                tentativeDate.getFullYear(),
+                tentativeDate.getMonth(),
+                Math.min(currentDay, monthLastDay)
+            );
+
             renderCalendar();
+            renderNotes();
+            renderExpenses();
+            updateExpenseStats();
         }
 
         // 渲染日历
@@ -1258,18 +1278,14 @@
             
             // 计算本月消费
             let monthExpense = 0;
-            Object.keys(state.expenses).forEach(key => {
-                const expenseDate = new Date(key);
+            let expenseDays = 0;
+            Object.entries(state.expenses).forEach(([key, expensesForDay]) => {
+                const expenseDate = parseDateKey(key);
                 if (expenseDate.getFullYear() === year && expenseDate.getMonth() === month) {
-                    monthExpense += state.expenses[key].reduce((sum, expense) => sum + expense.amount, 0);
+                    monthExpense += expensesForDay.reduce((sum, expense) => sum + expense.amount, 0);
+                    expenseDays += 1;
                 }
             });
-            
-            // 计算本月有消费的天数
-            const expenseDays = Object.keys(state.expenses).filter(key => {
-                const expenseDate = new Date(key);
-                return expenseDate.getFullYear() === year && expenseDate.getMonth() === month;
-            }).length;
             
             // 计算平均每日消费
             const avgExpense = expenseDays > 0 ? monthExpense / expenseDays : 0;
@@ -1370,6 +1386,11 @@
             const month = String(date.getMonth() + 1).padStart(2, '0');
             const day = String(date.getDate()).padStart(2, '0');
             return `${year}-${month}-${day}`;
+        }
+
+        function parseDateKey(key) {
+            const [year, month, day] = key.split('-').map(Number);
+            return new Date(year, month - 1, day);
         }
 
         // 页面加载完成后初始化
