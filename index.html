@@ -972,6 +972,7 @@
                 Math.min(currentDay, monthLastDay)
             );
 
+            // Month switch may shift the selected day (e.g., 31 -> 30), so refresh all dependent views
             renderCalendar();
             renderNotes();
             renderExpenses();
@@ -1390,7 +1391,7 @@
 
         function parseDateKey(key) {
             const parts = key.split('-').map(Number);
-            if (parts.length !== 3 || parts.some((value) => Number.isNaN(value))) return null;
+            if (parts.length !== 3 || parts.some((part) => Number.isNaN(part))) return null;
             const [year, month, day] = parts;
             const daysInMonth = new Date(year, month, 0).getDate();
             if (year <= 0 || month < 1 || month > 12 || day < 1 || day > daysInMonth) return null;
