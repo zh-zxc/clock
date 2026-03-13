@@ -1281,7 +1281,7 @@
             let expenseDays = 0;
             Object.entries(state.expenses).forEach(([key, expensesForDay]) => {
                 const expenseDate = parseDateKey(key);
-                if (expenseDate.getFullYear() === year && expenseDate.getMonth() === month) {
+                if (expenseDate && expenseDate.getFullYear() === year && expenseDate.getMonth() === month) {
                     monthExpense += expensesForDay.reduce((sum, expense) => sum + expense.amount, 0);
                     expenseDays += 1;
                 }
@@ -1389,8 +1389,11 @@
         }
 
         function parseDateKey(key) {
-            const [year, month, day] = key.split('-').map(Number);
-            return new Date(year, month - 1, day);
+            const parts = key.split('-').map(Number);
+            if (parts.length !== 3 || parts.some(Number.isNaN)) return null;
+            const [year, month, day] = parts;
+            const parsed = new Date(year, month - 1, day);
+            return Number.isNaN(parsed.getTime()) ? null : parsed;
         }
 
         // 页面加载完成后初始化
