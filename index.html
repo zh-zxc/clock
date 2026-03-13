@@ -1390,7 +1390,7 @@
 
         function parseDateKey(key) {
             const parts = key.split('-').map(Number);
-            if (parts.length !== 3 || parts.some(Number.isNaN)) return null;
+            if (parts.length !== 3 || parts.some((value) => Number.isNaN(value))) return null;
             const [year, month, day] = parts;
             const parsed = new Date(year, month - 1, day);
             return Number.isNaN(parsed.getTime()) ? null : parsed;
