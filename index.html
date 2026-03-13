@@ -1390,11 +1390,15 @@
 
         function parseDateKey(key) {
             const parts = key.split('-').map(Number);
-            if (parts.length !== 3 || parts.some((value) => !Number.isFinite(value))) return null;
+            if (parts.length !== 3 || parts.some(isNaN)) return null;
             const [year, month, day] = parts;
             if (year <= 0 || month < 1 || month > 12 || day < 1 || day > 31) return null;
             const parsed = new Date(year, month - 1, day);
-            return Number.isNaN(parsed.getTime()) ? null : parsed;
+            const isSameDate =
+                parsed.getFullYear() === year &&
+                parsed.getMonth() === month - 1 &&
+                parsed.getDate() === day;
+            return Number.isNaN(parsed.getTime()) || !isSameDate ? null : parsed;
         }
 
         // 页面加载完成后初始化
