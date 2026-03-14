@@ -954,8 +954,29 @@
 
         // 切换月份
         function changeMonth(delta) {
-            state.selectedDate.setMonth(state.selectedDate.getMonth() + delta);
+            const currentDay = state.selectedDate.getDate();
+            const tentativeDate = new Date(
+                state.selectedDate.getFullYear(),
+                state.selectedDate.getMonth() + delta,
+                1
+            );
+            const monthLastDay = new Date(
+                tentativeDate.getFullYear(),
+                tentativeDate.getMonth() + 1,
+                0
+            ).getDate();
+            
+            state.selectedDate = new Date(
+                tentativeDate.getFullYear(),
+                tentativeDate.getMonth(),
+                Math.min(currentDay, monthLastDay)
+            );
+
+            // Month switch may shift the selected day (e.g., 31 -> 30), so refresh all dependent views to show data for the adjusted date
             renderCalendar();
+            renderNotes();
+            renderExpenses();
+            updateExpenseStats();
         }
 
         // 渲染日历
@@ -1258,18 +1279,14 @@
             
             // 计算本月消费
             let monthExpense = 0;
-            Object.keys(state.expenses).forEach(key => {
-                const expenseDate = new Date(key);
-                if (expenseDate.getFullYear() === year && expenseDate.getMonth() === month) {
-                    monthExpense += state.expenses[key].reduce((sum, expense) => sum + expense.amount, 0);
+            let expenseDays = 0;
+            Object.entries(state.expenses).forEach(([key, expensesForDay]) => {
+                const expenseDate = parseDateKey(key);
+                if (isDateInMonth(expenseDate, year, month)) {
+                    monthExpense += expensesForDay.reduce((sum, expense) => sum + expense.amount, 0);
+                    expenseDays += 1;
                 }
             });
-            
-            // 计算本月有消费的天数
-            const expenseDays = Object.keys(state.expenses).filter(key => {
-                const expenseDate = new Date(key);
-                return expenseDate.getFullYear() === year && expenseDate.getMonth() === month;
-            }).length;
             
             // 计算平均每日消费
             const avgExpense = expenseDays > 0 ? monthExpense / expenseDays : 0;
@@ -1370,6 +1387,26 @@
             const month = String(date.getMonth() + 1).padStart(2, '0');
             const day = String(date.getDate()).padStart(2, '0');
             return `${year}-${month}-${day}`;
+        }
+
+        function parseDateKey(key) {
+            const parts = key.split('-').map(Number);
+            if (parts.length !== 3 || parts.some((value) => Number.isNaN(value))) return null;
+            const [year, month, day] = parts;
+            const monthIndex = month - 1;
+            const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
+            // Limit to AD years; adjust here if historical years need to be supported
+            if (year < 1 || month < 1 || month > 12 || day < 1 || day > daysInMonth) return null;
+            const parsed = new Date(year, month - 1, day);
+            const isSameDate =
+                parsed.getFullYear() === year &&
+                parsed.getMonth() === month - 1 &&
+                parsed.getDate() === day;
+            return isSameDate ? parsed : null;
+        }
+
+        function isDateInMonth(date, year, month) {
+            return date && date.getFullYear() === year && date.getMonth() === month;
         }
 
         // 页面加载完成后初始化
